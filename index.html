@@ -469,6 +469,8 @@ function restaurantApp(){
     clearTimeout(timer);
     try{
       if(!me){me=await rpc('r_me',{t:TOKEN});$('#rName0').textContent=me.name;$('#rAddr0').textContent=me.address+' · ממשק מסעדה';$('#rLogo').textContent=me.name.slice(0,1);
+        if(me.settings&&me.settings.loc_fixed===false)fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&limit=1&q='+encodeURIComponent(me.address))
+          .then(r=>r.json()).then(x=>{if(x&&x[0])return rpc('r_set_location',{t:TOKEN,p_lat:+x[0].lat,p_lng:+x[0].lon});}).catch(()=>{});
         if(me.settings&&(me.settings.zones||me.settings.default_windows)){WIN=me.settings;$('#readyBox').style.display='none';$('#winBox').style.display='block';renderWin();}}
       const d=await rpc('r_orders',{t:TOKEN});
       $('#cDot').classList.toggle('on',d.courier_online);$('#cTxt').textContent=d.courier_online?'שליח זמין':'אין שליח מחובר';
