@@ -121,6 +121,21 @@ async function rpc(fn,args){
   if(!r.ok){const m=(j&&j.message)||('שגיאה '+r.status);const e=new Error(ERR[m]||m);e.code=m;throw e;}
   return j;
 }
+const VAPID='BLavb4ymolI1BVSgt6prpOwW_CRfHz1RtaTBry9xCatmzHcDb5VHBJKJ-2m69rx3dXLzhEkdZZyt4hUmbzyOQ2Y';
+const pushOK=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+function b64u(s){const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+async function enablePush(ask){
+  try{
+    if(!pushOK())return false;
+    const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+    if(Notification.permission==='default'){if(!ask)return false;if(await Notification.requestPermission()!=='granted')return false;}
+    if(Notification.permission!=='granted')return false;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)});
+    await rpc('save_push',{t:TOKEN,sub:sub.toJSON(),p_url:location.origin+location.pathname+'?'+MODE+'='+TOKEN});
+    return true;
+  }catch(e){console.warn('push',e);return false;}
+}
 function km(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
 const hhmm=d=>new Date(d).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
 
@@ -254,7 +269,7 @@ function courierApp(){
       sh.insertAdjacentHTML('beforeend','<div class="waiting"><span class="spin"></span>ממתין להזמנות · המסך יישאר דלוק</div>');
       slider(sh,{label:'החלק כדי להתנתק',cls:'stop',icon:ICON_POWER('#ef4444'),onDone:async()=>{await rpc('c_set_online',{t:TOKEN,p_online:false});stopGeo();keepAwake(false);S.viewKey=null;await poll();}});
     }else{
-      slider(sh,{label:'החלק כדי להתחבר',cls:'go',icon:ICON_POWER('#22c55e'),onDone:async()=>{await rpc('c_set_online',{t:TOKEN,p_online:true});startGeo();keepAwake(true);chime();S.viewKey=null;toast('מחובר · הזמנות יגיעו עם צליל');await poll();}});
+      slider(sh,{label:'החלק כדי להתחבר',cls:'go',icon:ICON_POWER('#22c55e'),onDone:async()=>{await rpc('c_set_online',{t:TOKEN,p_online:true});startGeo();keepAwake(true);chime();enablePush(true).then(ok=>{if(!ok&&pushOK()&&Notification.permission==='denied')toast('התראות חסומות · אפשר אותן בהגדרות כדי לקבל הזמנות גם במסך נעול',true);});S.viewKey=null;toast('מחובר · הזמנות יגיעו עם צליל');await poll();}});
     }
   }
 
@@ -327,6 +342,7 @@ function courierApp(){
       $('#bars').innerHTML=vals.map(([d,v],i)=>`<div class="${i===6?'today':''}"><span>${Math.round(v)}</span><i style="height:${Math.max(4,v/mx*95)}px"></i>${i===6?'היום':days[d.getDay()]}</div>`).join('');
     }
   }
+  enablePush(false);
   poll();
 }
 
@@ -336,6 +352,7 @@ function courierApp(){
 function restaurantApp(){
   $('#app').innerHTML=`<div class="rest">
     <div class="rh"><div class="logo" id="rLogo">•</div><div><div class="t1" id="rName0">…</div><div class="t2" id="rAddr0"></div></div><div class="cstat"><span class="dot" id="cDot"></span><span id="cTxt">שליח</span></div></div>
+    <button class="bookbtn" id="bellBtn" style="display:none;width:auto;height:46px;font-size:16px;margin:0 14px 12px;padding:0 16px;background:var(--ink);width:calc(100% - 28px)">🔔 הפעל התראות על המשלוחים</button>
     <div class="rcard">
       <div class="t1" style="font-size:20px">הזמנת שליח</div>
       <div class="lbl">כתובת הלקוח</div>
@@ -423,6 +440,9 @@ function restaurantApp(){
     $('#rDone').innerHTML=done.length?done.map(card).join(''):'<div class="empty">עדיין אין</div>';
     document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{try{const ok=await rpc('r_cancel',{t:TOKEN,p_id:b.dataset.cancel});toast(ok?'המשלוח בוטל':'שליח כבר לקח את המשלוח',!ok);poll();}catch(e){toast(e.message,true);}});
   }
+  if(pushOK()&&Notification.permission!=='granted'){$('#bellBtn').style.display='block';}
+  $('#bellBtn').onclick=async()=>{unlockAudio();const ok=await enablePush(true);if(ok){$('#bellBtn').style.display='none';toast('התראות הופעלו');}else toast('לא ניתן להפעיל התראות · בדקו בהגדרות',true);};
+  enablePush(false);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')poll();});
   poll();
 }
