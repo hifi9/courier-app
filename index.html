@@ -265,11 +265,17 @@ function courierApp(){
   function renderSheet(){
     const sh=$('#sheet');sh.innerHTML='';
     if(S.active){renderActive(sh);return;}
+    if(pushOK()&&!S.pushOn){
+      const bb=document.createElement('button');bb.className='b dark';bb.style.cssText='width:100%;height:52px;margin-bottom:12px;font-size:17px;background:#fff;color:var(--ink);box-shadow:0 4px 14px #0006';
+      bb.textContent=Notification.permission==='denied'?'🔕 התראות חסומות · פתח הגדרות האתר ואשר':'🔔 הפעל התראות · לקבל הזמנות גם כשהאפליקציה סגורה';
+      bb.onclick=async()=>{unlockAudio();const ok=await enablePush(true);S.pushOn=ok;if(ok){toast('התראות הופעלו');S.viewKey=null;render();}else toast(Notification.permission==='denied'?'התראות חסומות בהגדרות הדפדפן':'לא הצלחתי להפעיל התראות',true);};
+      sh.appendChild(bb);
+    }
     if(S.me&&S.me.is_online){
       sh.insertAdjacentHTML('beforeend','<div class="waiting"><span class="spin"></span>ממתין להזמנות · המסך יישאר דלוק</div>');
       slider(sh,{label:'החלק כדי להתנתק',cls:'stop',icon:ICON_POWER('#ef4444'),onDone:async()=>{await rpc('c_set_online',{t:TOKEN,p_online:false});stopGeo();keepAwake(false);S.viewKey=null;await poll();}});
     }else{
-      slider(sh,{label:'החלק כדי להתחבר',cls:'go',icon:ICON_POWER('#22c55e'),onDone:async()=>{await rpc('c_set_online',{t:TOKEN,p_online:true});startGeo();keepAwake(true);chime();enablePush(true).then(ok=>{if(!ok&&pushOK()&&Notification.permission==='denied')toast('התראות חסומות · אפשר אותן בהגדרות כדי לקבל הזמנות גם במסך נעול',true);});S.viewKey=null;toast('מחובר · הזמנות יגיעו עם צליל');await poll();}});
+      slider(sh,{label:'החלק כדי להתחבר',cls:'go',icon:ICON_POWER('#22c55e'),onDone:async()=>{await rpc('c_set_online',{t:TOKEN,p_online:true});startGeo();keepAwake(true);chime();enablePush(true).then(ok=>{S.pushOn=ok;if(ok){S.viewKey=null;render();}if(!ok&&pushOK()&&Notification.permission==='denied')toast('התראות חסומות · אפשר אותן בהגדרות כדי לקבל הזמנות גם במסך נעול',true);});S.viewKey=null;toast('מחובר · הזמנות יגיעו עם צליל');await poll();}});
     }
   }
 
@@ -342,7 +348,7 @@ function courierApp(){
       $('#bars').innerHTML=vals.map(([d,v],i)=>`<div class="${i===6?'today':''}"><span>${Math.round(v)}</span><i style="height:${Math.max(4,v/mx*95)}px"></i>${i===6?'היום':days[d.getDay()]}</div>`).join('');
     }
   }
-  enablePush(false);
+  enablePush(false).then(ok=>{S.pushOn=ok;if(ok){S.viewKey=null;render();}});
   poll();
 }
 
