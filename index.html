@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1628">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>משלוחים</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--navy:#0d1628;--navy2:#16223a;--navy3:#22314f;--line:#2b3b5c;--txt:#e8edf6;--mut:#8e9bb5;--green:#22c55e;--green2:#15803d;--red:#ef4444;--orange:#f97316;--ink:#0d1628}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--navy);font-family:Heebo,system-ui,sans-serif;color:var(--txt);overflow:hidden}
+.app{position:relative;height:100%;max-width:520px;margin:0 auto;overflow:hidden}
+#map{position:absolute;inset:0;background:#0f1a2e;z-index:0}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(195deg) brightness(.82) contrast(.92) saturate(.55)}
+.leaflet-control-attribution{font-size:9px;background:#0d1628aa!important;color:#8e9bb5}.leaflet-control-attribution a{color:#8e9bb5}
+.leaflet-control-zoom{display:none}
+.top{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;left:14px;display:flex;align-items:center;gap:10px;z-index:500}
+.round{width:52px;height:52px;border-radius:50%;background:#fff;color:var(--ink);border:0;display:grid;place-items:center;box-shadow:0 4px 14px #0006;cursor:pointer}
+.pill{height:46px;padding:0 18px;border-radius:23px;background:#fff;color:var(--ink);display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;box-shadow:0 4px 14px #0006}
+.dot{width:10px;height:10px;border-radius:50%;background:#9ca3af;flex:none}.dot.on{background:var(--green);box-shadow:0 0 0 4px #22c55e33}
+.earn{margin-inline-start:auto;background:#ecfdf5;color:var(--green2)}
+.locate{position:absolute;left:14px;top:calc(76px + env(safe-area-inset-top));z-index:500;width:46px;height:46px}
+.sheet{position:absolute;right:0;left:0;bottom:0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));z-index:600;pointer-events:none}.sheet>*{pointer-events:auto}
+.waiting{margin:0 auto 12px;width:max-content;max-width:100%;background:var(--navy2);border:1px solid var(--line);padding:10px 18px;border-radius:22px;font-weight:700;display:flex;gap:8px;align-items:center}
+.spin{width:14px;height:14px;border:2px solid var(--mut);border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.slide{position:relative;height:74px;border-radius:37px;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none;-webkit-user-select:none}
+.slide.go{background:var(--green)}.slide.stop{background:var(--red)}.slide.step{background:var(--orange)}.slide.wait{opacity:.6}
+.slide-label{font-weight:800;font-size:21px;color:#fff;padding-inline-start:40px;transition:opacity .15s;pointer-events:none}
+.chev{opacity:.7;margin-inline-start:6px;letter-spacing:-3px}
+.knob{position:absolute;right:6px;top:6px;width:62px;height:62px;border-radius:50%;background:#fff;display:grid;place-items:center;touch-action:none;cursor:grab;box-shadow:0 2px 8px #0004}
+.card{background:#fff;color:var(--ink);border-radius:26px;padding:16px 18px;box-shadow:0 10px 30px #0008;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:12px}
+.ic{width:46px;height:46px;border-radius:50%;background:#fff1e8;display:grid;place-items:center;flex:none;font-size:20px}.ic.blue{background:#e8f0ff}
+.t1{font-weight:800;font-size:18px}.t2{color:#64748b;font-size:15px}
+.money{margin-inline-start:auto;color:var(--green2);font-weight:800;font-size:24px;white-space:nowrap}
+.hr{height:1px;background:#e5e7eb;margin:12px 0}
+.btns{display:flex;gap:10px;margin-top:12px}
+.b{flex:1;height:46px;border-radius:14px;border:0;font:700 16px Heebo,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;cursor:pointer}
+.b.light{background:#f1f5f9;color:var(--ink)}.b.dark{background:var(--ink);color:#fff}
+.steps{display:flex;gap:6px;margin:4px 0 12px}.steps i{flex:1;height:5px;border-radius:3px;background:#e5e7eb}.steps i.done{background:var(--orange)}
+.tag{display:inline-block;background:#fff7ed;color:#c2410c;font-weight:700;font-size:13px;border-radius:8px;padding:3px 8px;margin-bottom:8px}
+.overlay{position:absolute;inset:0;background:#0009;z-index:900;display:none;align-items:flex-end;padding:14px 14px calc(16px + env(safe-area-inset-bottom))}
+.overlay.show{display:flex;animation:fi .2s}@keyframes fi{from{opacity:0}}
+.offer{width:100%;background:#fff;color:var(--ink);border-radius:28px;padding:20px;animation:up .3s cubic-bezier(.2,.9,.3,1)}@keyframes up{from{transform:translateY(60px)}}
+.ring{position:relative;width:70px;height:70px;flex:none}.ring svg{transform:rotate(-90deg)}.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:22px}
+.big{font-size:34px;font-weight:800;color:var(--green2)}
+.stop2{display:flex;gap:10px;align-items:flex-start;margin:10px 0}.stop2 .pin{width:12px;height:12px;border-radius:50%;margin-top:6px;flex:none}
+.offer .btns .b{height:58px;font-size:19px;border-radius:18px}.b.accept{background:var(--green);color:#fff;flex:2}.b.decline{background:#f1f5f9;color:#475569}
+.drawer-bg{position:absolute;inset:0;background:#0008;z-index:1000;opacity:0;pointer-events:none;transition:.25s}
+.drawer{position:absolute;top:0;bottom:0;right:0;width:76%;max-width:340px;background:var(--navy);z-index:1001;transform:translateX(105%);transition:.28s cubic-bezier(.2,.9,.3,1);padding:calc(30px + env(safe-area-inset-top)) 18px 20px}
+.open .drawer{transform:none}.open .drawer-bg{opacity:1;pointer-events:auto}
+.me{display:flex;align-items:center;gap:14px;padding-bottom:20px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.av{width:64px;height:64px;border-radius:50%;background:#2a4170;display:grid;place-items:center;font-weight:800;font-size:24px;color:#fff;flex:none}
+.nav{display:flex;align-items:center;gap:14px;padding:16px 14px;border-radius:16px;font-size:19px;font-weight:700;cursor:pointer}.nav:active{background:var(--navy3)}
+.ver{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;color:var(--mut);font-size:13px}
+.page{position:absolute;inset:0;background:var(--navy);z-index:950;transform:translateX(-100%);transition:.28s;overflow:auto;padding-bottom:30px}.page.show{transform:none}
+.ph{display:flex;align-items:center;gap:12px;padding:calc(18px + env(safe-area-inset-top)) 18px 18px;font-size:26px;font-weight:800}
+.ph button{margin-inline-start:auto;background:none;border:0;color:#fff;cursor:pointer;font-size:22px}
+.pc{background:#fff;color:var(--ink);border-radius:24px;margin:0 14px 12px;padding:18px}
+.sum{display:flex;text-align:center}.sum>div{flex:1}.sum>div+div{border-inline-start:1px solid #e5e7eb}
+.sum b{display:block;font-size:28px;font-weight:800}.sum span{color:#64748b;font-size:14px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:130px;margin-top:14px}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;font-size:12px;color:#64748b}
+.bars i{width:100%;border-radius:8px 8px 3px 3px;background:#cbd5e1}.bars .today i{background:var(--green)}
+.toast{pointer-events:none;position:absolute;top:calc(80px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-20px);background:var(--green);color:#fff;font-weight:800;padding:12px 20px;border-radius:16px;z-index:2000;opacity:0;transition:.3s;max-width:90%;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}.toast.err{background:var(--red)}
+.empty{color:#94a3b8;text-align:center;padding:18px}
+.net{position:absolute;top:calc(76px + env(safe-area-inset-top));right:14px;z-index:500;background:var(--red);color:#fff;font-weight:700;font-size:13px;border-radius:10px;padding:6px 10px;display:none}
+/* restaurant */
+.rest{position:absolute;inset:0;background:#f4f1ec;color:var(--ink);overflow:auto;padding-bottom:40px}
+.rh{display:flex;align-items:center;gap:12px;padding:calc(16px + env(safe-area-inset-top)) 16px 12px;position:sticky;top:0;background:#f4f1ec;z-index:2}
+.logo{width:48px;height:48px;border-radius:14px;background:var(--orange);color:#fff;display:grid;place-items:center;font-weight:800;font-size:22px;flex:none}
+.cstat{margin-inline-start:auto;display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;background:#fff;border-radius:20px;padding:8px 12px;white-space:nowrap}
+.rcard{background:#fff;border-radius:22px;margin:0 14px 12px;padding:16px;box-shadow:0 2px 10px #0000000d}
+.lbl{font-weight:700;font-size:14px;color:#475569;margin:12px 0 6px}
+.inp{width:100%;height:48px;border:1.5px solid #e2e8f0;border-radius:14px;padding:0 14px;font:500 16px Heebo,sans-serif;background:#f8fafc;color:var(--ink);outline:none}
+.inp:focus{border-color:var(--orange);background:#fff}
+.addr{display:flex;gap:8px}.addr .inp{flex:1}.srch{flex:none;width:72px;border:0;border-radius:14px;background:var(--ink);color:#fff;font:700 15px Heebo,sans-serif;cursor:pointer}
+.sugg{margin-top:8px;border:1.5px solid #e2e8f0;border-radius:14px;overflow:hidden;display:none}
+.sugg div{padding:11px 14px;font-size:15px;cursor:pointer;border-top:1px solid #f1f5f9}.sugg div:first-child{border-top:0}.sugg div:active{background:#fff7ed}
+.picked{margin-top:8px;font-size:14px;color:var(--green2);font-weight:700;display:none}
+.seg{display:flex;gap:8px}.seg button{flex:1;border:1.5px solid #e2e8f0;background:#fff;border-radius:12px;padding:9px 6px;font:600 14px Heebo,sans-serif;color:#334155;cursor:pointer}
+.seg button.on{border-color:var(--orange);background:#fff7ed;color:#c2410c}
+.two{display:flex;gap:10px}.two>div{flex:1}
+.price{display:flex;justify-content:space-between;align-items:center;margin:16px 0 12px;padding:12px 14px;background:#f8fafc;border-radius:14px}
+.bookbtn{width:100%;height:58px;border:0;border-radius:18px;background:var(--orange);color:#fff;font:800 20px Heebo,sans-serif;cursor:pointer}.bookbtn:disabled{opacity:.5}
+.sec{font-weight:800;font-size:18px;margin:18px 18px 10px}
+.chip{font-weight:700;font-size:13px;border-radius:10px;padding:4px 10px;white-space:nowrap;margin-inline-start:auto;flex:none}
+.prog{display:flex;gap:5px;margin:12px 0 10px}.prog i{flex:1;height:5px;border-radius:3px;background:#e5e7eb}.prog i.on{background:var(--orange)}
+.b.sm{flex:none;height:34px;padding:0 14px;font-size:14px;margin-inline-start:auto}
+.gate{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;font-size:18px;line-height:1.6;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ================= config ================= */
+const SB_URL='https://inkbvfewxwnedfmkjxti.supabase.co';
+const SB_KEY='sb_publishable_Dw89LyAhNT2PTRVraI3OCA_CMTuMN__';
+const HOME=[32.1466,34.8394];
+
+const $=s=>document.querySelector(s);
+const ils=n=>'₪'+Number(n||0).toFixed(2);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let tt;function toast(m,err){const t=$('#toast');t.textContent=m;t.classList.toggle('err',!!err);t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2600);}
+const ERR={bad_token:'הקישור לא תקין',taken:'ההזמנה כבר נלקחה',already_busy:'יש לך כבר משלוח פעיל',address_required:'צריך לבחור כתובת מהרשימה',too_far:'הכתובת רחוקה מדי',not_found:'ההזמנה לא נמצאה',bad_state:'שלב לא תקין'};
+async function rpc(fn,args){
+  const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
+  const j=await r.json().catch(()=>null);
+  if(!r.ok){const m=(j&&j.message)||('שגיאה '+r.status);const e=new Error(ERR[m]||m);e.code=m;throw e;}
+  return j;
+}
+function km(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+const hhmm=d=>new Date(d).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+
+/* ================= audio ================= */
+let ac=null,ringInt=null;
+function unlockAudio(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume&&ac.resume();}catch(e){}}
+function beep(f,t0,d,v=.2){const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(v,t0+.01);g.gain.exponentialRampToValueAtTime(.001,t0+d);o.connect(g).connect(ac.destination);o.start(t0);o.stop(t0+d+.02);}
+function ringOnce(){if(!ac)return;const t=ac.currentTime;[880,1175,880,1175].forEach((f,i)=>beep(f,t+i*.16,.14));}
+function chime(){if(!ac)return;const t=ac.currentTime;beep(660,t,.25,.12);beep(990,t+.18,.35,.12);}
+function startRing(){stopRing();ringOnce();ringInt=setInterval(ringOnce,1400);try{navigator.vibrate&&navigator.vibrate([400,200,400,200,400]);}catch(e){}}
+function stopRing(){clearInterval(ringInt);ringInt=null;}
+
+/* ================= slider ================= */
+const ICON_POWER=c=>`<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>`;
+const ICON_ARROW=c=>`<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>`;
+function slider(host,{label,cls,icon,onDone}){
+  const wrap=document.createElement('div');
+  wrap.innerHTML=`<div class="slide ${cls}"><div class="slide-label">${label}<span class="chev">‹‹</span></div><div class="knob">${icon}</div></div>`;
+  host.appendChild(wrap);
+  const track=wrap.firstChild,knob=track.querySelector('.knob'),lab=track.querySelector('.slide-label');
+  let sx=null,max=0,dx=0,locked=false;
+  const reset=()=>{knob.style.transition='transform .22s';knob.style.transform='';lab.style.opacity=1;track.classList.remove('wait');locked=false;};
+  knob.addEventListener('pointerdown',e=>{if(locked)return;unlockAudio();sx=e.clientX;max=track.clientWidth-knob.offsetWidth-12;knob.setPointerCapture(e.pointerId);knob.style.transition='none';});
+  knob.addEventListener('pointermove',e=>{if(sx===null)return;dx=Math.min(0,Math.max(-max,e.clientX-sx));knob.style.transform=`translateX(${dx}px)`;lab.style.opacity=1-Math.abs(dx)/max;});
+  const end=async()=>{if(sx===null)return;sx=null;knob.style.transition='transform .22s';
+    if(Math.abs(dx)>max*.7){knob.style.transform=`translateX(${-max}px)`;locked=true;track.classList.add('wait');
+      try{await onDone();}catch(e){toast(e.message,true);reset();}}
+    else reset();dx=0;};
+  knob.addEventListener('pointerup',end);knob.addEventListener('pointercancel',end);
+}
+
+/* ================= token / routing ================= */
+const qs=new URLSearchParams(location.search);
+let MODE=null,TOKEN=null;
+try{
+  if(qs.get('c')){MODE='c';TOKEN=qs.get('c');localStorage.setItem('cr_mode','c');localStorage.setItem('cr_token',TOKEN);}
+  else if(qs.get('r')){MODE='r';TOKEN=qs.get('r');localStorage.setItem('cr_mode','r');localStorage.setItem('cr_token',TOKEN);}
+  else{MODE=localStorage.getItem('cr_mode');TOKEN=localStorage.getItem('cr_token');}
+}catch(e){MODE=qs.get('c')?'c':qs.get('r')?'r':null;TOKEN=qs.get('c')||qs.get('r');}
+
+/* ================================================================ */
+/* ========================== COURIER ============================= */
+/* ================================================================ */
+function courierApp(){
+  $('#app').innerHTML=`
+  <div id="map"></div>
+  <div class="top">
+    <button class="round" id="menuBtn" aria-label="תפריט"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <div class="pill"><span class="dot" id="dot"></span><span id="status">מנותק</span></div>
+    <div class="pill earn" id="earnPill">₪0.00</div>
+  </div>
+  <button class="round locate" id="locBtn" aria-label="מיקום"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+  <div class="net" id="net">אין חיבור לשרת</div>
+  <div class="sheet" id="sheet"></div>
+  <div class="overlay" id="offerOv"><div class="offer" id="offer"></div></div>
+  <div id="drawerWrap"><div class="drawer-bg" id="drawerBg"></div><div class="drawer">
+    <div class="me"><div class="av" id="avName">•</div><div><div style="font-size:22px;font-weight:800" id="meName">…</div><div style="color:var(--mut);display:flex;align-items:center;gap:6px"><span class="dot" id="dot2"></span><span id="status2">מנותק</span></div></div></div>
+    <div class="nav" data-go="home">🗺️ בית</div><div class="nav" data-go="history">🚲 היסטוריה</div><div class="nav" data-go="earnings">👛 הכנסות</div>
+    <div class="ver">משלוחים · 1.0</div></div></div>
+  <div class="page" id="history"><div class="ph">היסטוריית הזמנות<button data-back>✕</button></div>
+    <div class="pc"><div style="display:flex;justify-content:space-between;color:#64748b;margin-bottom:12px"><b style="color:var(--ink)">📅 החודש</b><span id="monthName"></span></div>
+    <div class="sum"><div><b id="hCount">0</b><span>משלוחים החודש</span></div><div><b id="hTotal">₪0</b><span>הכנסות ממשלוחים</span></div></div></div><div id="hList"></div></div>
+  <div class="page" id="earnings"><div class="ph">הכנסות<button data-back>✕</button></div>
+    <div class="pc"><div style="color:#64748b;margin-bottom:6px">היום</div><div class="big" id="eToday">₪0.00</div>
+    <div class="sum" style="margin-top:14px"><div><b id="eCount">0</b><span>משלוחים</span></div><div><b id="eAvg">₪0</b><span>ממוצע למשלוח</span></div><div><b id="eHours">0:00</b><span>שעות מחובר</span></div></div></div>
+    <div class="pc"><b>7 הימים האחרונים</b><div class="bars" id="bars"></div></div></div>`;
+
+  const S={me:null,active:null,offer:null,today:{count:0,total:0},shown:null,dismissed:new Set(),pos:null,watch:null,wake:null,viewKey:null,fitKey:null,timer:null};
+
+  /* map */
+  const map=L.map('map',{zoomControl:false,attributionControl:true}).setView(HOME,14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  const dotIcon=(bg,html,sz=34)=>L.divIcon({className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],html:`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${bg};border:3px solid #fff;display:grid;place-items:center;font-size:16px;box-shadow:0 2px 8px #0008">${html}</div>`});
+  const meM=L.marker(HOME,{icon:dotIcon('#3b82f6','',26),zIndexOffset:1000});
+  const restM=L.marker(HOME,{icon:dotIcon('#f97316','🍽️')}),custM=L.marker(HOME,{icon:dotIcon('#3b82f6','🏠')});
+  const line=L.polyline([],{color:'#f97316',weight:5,dashArray:'8 10',opacity:.9}).addTo(map);
+  function drawMap(){
+    const me=S.pos||(S.me&&S.me.lat?[S.me.lat,S.me.lng]:null);
+    if(me){meM.setLatLng(me).addTo(map);}
+    const o=S.active;
+    if(o){restM.setLatLng([o.restaurant.lat,o.restaurant.lng]).addTo(map);custM.setLatLng([o.cust_lat,o.cust_lng]).addTo(map);
+      const target=['to_rest','at_rest'].includes(o.status)?[o.restaurant.lat,o.restaurant.lng]:[o.cust_lat,o.cust_lng];
+      line.setLatLngs(me?[me,target]:[]);
+      const fk=o.id+o.status;if(S.fitKey!==fk){S.fitKey=fk;const pts=[target];if(me)pts.push(me);map.fitBounds(L.latLngBounds(pts).pad(.6),{paddingBottomRight:[0,260]});}
+    }else{restM.remove();custM.remove();line.setLatLngs([]);if(S.fitKey){S.fitKey=null;if(me)map.setView(me,15);}}
+  }
+  $('#locBtn').onclick=()=>{const me=S.pos||(S.me&&S.me.lat?[S.me.lat,S.me.lng]:null);if(me)map.setView(me,16);else{startGeo();toast('מחפש מיקום…');}};
+
+  /* geolocation + wake lock */
+  function startGeo(){if(S.watch||!navigator.geolocation)return;
+    S.watch=navigator.geolocation.watchPosition(p=>{S.pos=[p.coords.latitude,p.coords.longitude];drawMap();},
+      e=>{if(e.code===1)toast('צריך לאשר גישה למיקום בהגדרות הדפדפן',true);},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});}
+  function stopGeo(){if(S.watch!=null){navigator.geolocation.clearWatch(S.watch);S.watch=null;}}
+  async function keepAwake(on){try{if(on&&'wakeLock' in navigator){S.wake=await navigator.wakeLock.request('screen');}else if(!on&&S.wake){await S.wake.release();S.wake=null;}}catch(e){}}
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(S.me&&S.me.is_online)keepAwake(true);poll();}});
+
+  /* polling */
+  async function poll(){
+    clearTimeout(S.timer);
+    try{
+      const d=await rpc('c_poll',{t:TOKEN,p_lat:S.pos?S.pos[0]:null,p_lng:S.pos?S.pos[1]:null});
+      $('#net').style.display='none';
+      const prevActive=S.active;
+      S.me=d.me;S.active=d.active;S.offer=d.offer;S.today=d.today;
+      if(prevActive&&!S.active&&!S.justDelivered)toast('המשלוח בוטל או הסתיים');
+      S.justDelivered=false;
+      render();
+    }catch(e){if(e.code==='bad_token'){gate('הקישור האישי לא תקין. בקש קישור חדש.');return;}$('#net').style.display='block';}
+    S.timer=setTimeout(poll,S.me&&S.me.is_online?3000:15000);
+  }
+
+  function render(){
+    const on=!!(S.me&&S.me.is_online);
+    ['#dot','#dot2'].forEach(s=>$(s).classList.toggle('on',on));
+    $('#status').textContent=$('#status2').textContent=on?'מחובר':'מנותק';
+    $('#earnPill').textContent=ils(S.today.total);
+    if(S.me){$('#meName').textContent=S.me.name;$('#avName').textContent=S.me.name.slice(0,1);}
+    const key=S.active?S.active.id+S.active.status:(on?'on':'off');
+    if(key!==S.viewKey){S.viewKey=key;renderSheet();}
+    /* offer handling */
+    const o=S.offer;
+    if(o&&!S.active&&o.id!==S.shown&&!S.dismissed.has(o.id))showOffer(o);
+    else if(S.shown&&(!o||o.id!==S.shown)&&!S.accepting){closeOffer();toast('ההזמנה כבר לא זמינה');}
+    drawMap();
+  }
+
+  function renderSheet(){
+    const sh=$('#sheet');sh.innerHTML='';
+    if(S.active){renderActive(sh);return;}
+    if(S.me&&S.me.is_online){
+      sh.insertAdjacentHTML('beforeend','<div class="waiting"><span class="spin"></span>ממתין להזמנות · המסך יישאר דלוק</div>');
+      slider(sh,{label:'החלק כדי להתנתק',cls:'stop',icon:ICON_POWER('#ef4444'),onDone:async()=>{await rpc('c_set_online',{t:TOKEN,p_online:false});stopGeo();keepAwake(false);S.viewKey=null;await poll();}});
+    }else{
+      slider(sh,{label:'החלק כדי להתחבר',cls:'go',icon:ICON_POWER('#22c55e'),onDone:async()=>{await rpc('c_set_online',{t:TOKEN,p_online:true});startGeo();keepAwake(true);chime();S.viewKey=null;toast('מחובר · הזמנות יגיעו עם צליל');await poll();}});
+    }
+  }
+
+  /* offer */
+  function showOffer(o){
+    S.shown=o.id;const C=2*Math.PI*30;
+    const dist=S.pos?km(S.pos[0],S.pos[1],o.restaurant.lat,o.restaurant.lng).toFixed(1):null;
+    $('#offer').innerHTML=`
+     <div class="row"><div class="ring"><svg width="70" height="70"><circle cx="35" cy="35" r="30" stroke="#e5e7eb" stroke-width="6" fill="none"/><circle id="arc" cx="35" cy="35" r="30" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><b id="secs">30</b></div>
+      <div style="margin-inline-start:auto;text-align:left"><div class="t2">הזמנה חדשה</div><div class="big">${ils(o.price)}</div></div></div>
+     <div class="hr"></div>
+     <div class="stop2"><span class="pin" style="background:#f97316"></span><div><div class="t1">${esc(o.restaurant.name)}</div><div class="t2">${esc(o.restaurant.address)}${dist?` · ${dist} ק״מ ממך`:''}</div></div></div>
+     <div class="stop2"><span class="pin" style="background:#3b82f6"></span><div><div class="t1">${esc(o.cust_address)}</div><div class="t2">${esc(o.size||'')}</div></div></div>
+     <div class="t2" style="margin-top:4px">📍 ${o.km} ק״מ${o.ready?' · ⏱️ מוכן '+esc(o.ready):''}</div>
+     ${o.note?`<div class="t2" style="margin-top:4px">📝 ${esc(o.note)}</div>`:''}
+     <div class="btns"><button class="b decline" id="dec">דחה</button><button class="b accept" id="acc">קבל הזמנה</button></div>`;
+    $('#offerOv').classList.add('show');startRing();
+    let left=30;clearInterval(S.cd);
+    S.cd=setInterval(()=>{left--;const s=$('#secs');if(!s)return;s.textContent=left;$('#arc').setAttribute('stroke-dashoffset',C*(1-left/30));if(left<=10)$('#arc').setAttribute('stroke','#ef4444');if(left<=0)decline(o);},1000);
+    $('#acc').onclick=async()=>{S.accepting=true;$('#acc').disabled=true;
+      try{const a=await rpc('c_accept',{t:TOKEN,p_id:o.id});closeOffer();S.active=a;S.viewKey=null;render();}
+      catch(e){toast(e.message,true);closeOffer();S.dismissed.add(o.id);}
+      S.accepting=false;poll();};
+    $('#dec').onclick=()=>decline(o);
+  }
+  async function decline(o){S.dismissed.add(o.id);closeOffer();try{await rpc('c_decline',{t:TOKEN,p_id:o.id});}catch(e){}}
+  function closeOffer(){clearInterval(S.cd);stopRing();$('#offerOv').classList.remove('show');S.shown=null;}
+
+  /* active */
+  const STEPS={to_rest:[0,'בדרך למסעדה','הגעתי למסעדה'],at_rest:[1,'במסעדה · איסוף','אספתי את ההזמנה'],to_cust:[2,'בדרך ללקוח','הגעתי ללקוח'],at_cust:[3,'אצל הלקוח','המשלוח נמסר']};
+  function renderActive(sh){
+    const o=S.active,[i,tag,btn]=STEPS[o.status],atRest=i<2;
+    const lat=atRest?o.restaurant.lat:o.cust_lat,lng=atRest?o.restaurant.lng:o.cust_lng;
+    const addr=atRest?o.restaurant.address:o.cust_address,title=atRest?o.restaurant.name:('לקוח'+(o.cust_name?': '+o.cust_name:''));
+    const phone=atRest?o.restaurant.phone:o.cust_phone;
+    sh.insertAdjacentHTML('beforeend',`<div class="card">
+      <div class="steps">${[0,1,2,3].map(k=>`<i class="${k<=i?'done':''}"></i>`).join('')}</div>
+      <span class="tag">${tag}</span>
+      <div class="row"><div class="ic ${atRest?'':'blue'}">${atRest?'🍽️':'🏠'}</div><div><div class="t1">${esc(title)}</div><div class="t2">${esc(addr)}</div></div><div class="money">${ils(o.price)}</div></div>
+      <div class="hr"></div><div class="t2">${esc(o.size||'')} · ${o.km} ק״מ${o.note?' · 📝 '+esc(o.note):''}</div>
+      <div class="btns"><a class="b dark" href="https://waze.com/ul?ll=${lat},${lng}&navigate=yes" target="_blank" rel="noopener">🧭 ניווט ב-Waze</a>
+      ${phone?`<a class="b light" href="tel:${esc(phone)}">📞 ${atRest?'מסעדה':'לקוח'}</a>`:`<button class="b light" disabled style="opacity:.5">📞 אין מספר</button>`}</div></div>`);
+    slider(sh,{label:btn,cls:'step',icon:ICON_ARROW('#f97316'),onDone:async()=>{
+      const n=await rpc('c_advance',{t:TOKEN,p_id:o.id});
+      if(n.status==='delivered'){S.justDelivered=true;S.active=null;chime();toast('המשלוח נמסר · +'+ils(n.price));}else S.active=n;
+      S.viewKey=null;render();poll();}});
+  }
+
+  /* drawer & pages */
+  $('#menuBtn').onclick=()=>$('#drawerWrap').classList.add('open');
+  $('#drawerBg').onclick=()=>$('#drawerWrap').classList.remove('open');
+  document.querySelectorAll('.nav').forEach(n=>n.onclick=async()=>{$('#drawerWrap').classList.remove('open');const g=n.dataset.go;if(g==='home')return;$('#'+g).classList.add('show');await renderPage(g);});
+  document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>b.closest('.page').classList.remove('show'));
+  async function renderPage(g){
+    let H=[];try{H=await rpc('c_history',{t:TOKEN});}catch(e){toast(e.message,true);}
+    const now=new Date();
+    if(g==='history'){
+      const mon=H.filter(h=>new Date(h.delivered_at).getMonth()===now.getMonth());
+      $('#monthName').textContent=now.toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+      $('#hCount').textContent=mon.length;$('#hTotal').textContent=ils(mon.reduce((a,h)=>a+ +h.price,0));
+      $('#hList').innerHTML=H.length?H.map(h=>{const mins=Math.max(1,Math.round((new Date(h.delivered_at)-new Date(h.accepted_at))/60000));
+        return `<div class="pc"><div class="row"><div class="ic">🍽️</div><div><div class="t1">${esc(h.restaurant.name)}</div><div class="t2">${new Date(h.delivered_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div></div><div class="money">${ils(h.price)}</div></div><div class="hr"></div><div class="t2">🕒 ${mins} דק׳</div><div class="t2" style="margin-top:4px">📍 ${esc(h.cust_address)}</div></div>`;}).join(''):'<div class="empty">עדיין אין משלוחים</div>';
+    }
+    if(g==='earnings'){
+      const day=d=>new Date(d).toDateString(),td=H.filter(h=>day(h.delivered_at)===now.toDateString()),tot=td.reduce((a,h)=>a+ +h.price,0);
+      $('#eToday').textContent=ils(tot);$('#eCount').textContent=td.length;$('#eAvg').textContent=td.length?'₪'+(tot/td.length).toFixed(1):'₪0';
+      const secs=(S.me&&S.me.online_seconds_today)||0,mm=Math.floor(secs/60);$('#eHours').textContent=Math.floor(mm/60)+':'+String(mm%60).padStart(2,'0');
+      const days=['א','ב','ג','ד','ה','ו','ש'],vals=[];for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);vals.push([d,H.filter(h=>day(h.delivered_at)===d.toDateString()).reduce((a,h)=>a+ +h.price,0)]);}
+      const mx=Math.max(1,...vals.map(v=>v[1]));
+      $('#bars').innerHTML=vals.map(([d,v],i)=>`<div class="${i===6?'today':''}"><span>${Math.round(v)}</span><i style="height:${Math.max(4,v/mx*95)}px"></i>${i===6?'היום':days[d.getDay()]}</div>`).join('');
+    }
+  }
+  poll();
+}
+
+/* ================================================================ */
+/* ========================= RESTAURANT =========================== */
+/* ================================================================ */
+function restaurantApp(){
+  $('#app').innerHTML=`<div class="rest">
+    <div class="rh"><div class="logo" id="rLogo">•</div><div><div class="t1" id="rName0">…</div><div class="t2" id="rAddr0"></div></div><div class="cstat"><span class="dot" id="cDot"></span><span id="cTxt">שליח</span></div></div>
+    <div class="rcard">
+      <div class="t1" style="font-size:20px">הזמנת שליח</div>
+      <div class="lbl">כתובת הלקוח</div>
+      <div class="addr"><input class="inp" id="fAddr" placeholder="רחוב, מספר, עיר" autocomplete="off" enterkeyhint="search"><button class="srch" id="fSearch">חפש</button></div>
+      <div class="sugg" id="sugg"></div><div class="picked" id="picked"></div>
+      <div class="two"><div><div class="lbl">שם הלקוח</div><input class="inp" id="fName" placeholder="שם"></div><div><div class="lbl">טלפון</div><input class="inp" id="fPhone" inputmode="tel" placeholder="050-0000000"></div></div>
+      <div class="lbl">גודל המשלוח</div><div class="seg" id="sizeSeg"></div>
+      <div class="lbl">מוכן לאיסוף</div><div class="seg" id="readySeg"></div>
+      <div class="lbl">הערה לשליח</div><input class="inp" id="fNote" placeholder="קומה, קוד כניסה…">
+      <div class="price"><span class="t2">עלות משלוח</span><b id="fPrice" style="font-size:20px">—</b></div>
+      <button class="bookbtn" id="bookBtn">הזמן שליח</button>
+    </div>
+    <div class="sec">משלוחים פעילים</div><div id="rActive"></div>
+    <div class="sec">הושלמו היום</div><div id="rDone"></div>
+  </div>`;
+  const F={lat:null,lng:null,addr:'',size:'שקית אחת',ready:'עכשיו'};
+  let me=null,last={},timer=null;
+  const ST={searching:['מחפש שליח…',0,'#64748b'],to_rest:['שליח בדרך אליכם',1,'#f97316'],at_rest:['השליח במסעדה',2,'#f97316'],to_cust:['בדרך ללקוח',3,'#3b82f6'],at_cust:['אצל הלקוח',4,'#3b82f6'],delivered:['נמסר ✓',5,'#16a34a']};
+
+  function seg(id,opts,key){const el=$(id);el.innerHTML=opts.map(v=>`<button class="${F[key]===v?'on':''}">${v}</button>`).join('');
+    el.querySelectorAll('button').forEach(b=>b.onclick=()=>{F[key]=b.textContent;seg(id,opts,key);});}
+  seg('#sizeSeg',['שקית אחת','2 שקיות','גדול'],'size');seg('#readySeg',['עכשיו','10 דק׳','20 דק׳'],'ready');
+
+  /* address search (Nominatim, on demand only) */
+  async function search(){
+    unlockAudio();
+    const q=$('#fAddr').value.trim();if(q.length<3){toast('הקלידו כתובת מלאה',true);return;}
+    $('#fSearch').textContent='…';
+    try{
+      const u='https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&accept-language=he&addressdetails=1&limit=5&q='+encodeURIComponent(q);
+      const res=await (await fetch(u)).json();
+      const box=$('#sugg');
+      if(!res.length){box.style.display='block';box.innerHTML='<div style="color:#94a3b8">לא נמצא · נסו להוסיף עיר</div>';return;}
+      box.innerHTML=res.map((r,i)=>{const a=r.address||{};const nice=[[a.road,a.house_number].filter(Boolean).join(' '),a.city||a.town||a.village||a.suburb].filter(Boolean).join(', ')||r.display_name;
+        return `<div data-i="${i}">${esc(nice)}</div>`;}).join('');
+      box.style.display='block';
+      box.querySelectorAll('[data-i]').forEach(el=>el.onclick=()=>pick(res[+el.dataset.i],el.textContent));
+    }catch(e){toast('חיפוש הכתובת נכשל',true);}
+    finally{$('#fSearch').textContent='חפש';}
+  }
+  async function pick(r,nice){
+    F.lat=+r.lat;F.lng=+r.lon;F.addr=nice;$('#fAddr').value=nice;$('#sugg').style.display='none';
+    $('#picked').style.display='block';$('#picked').textContent='✓ '+nice;
+    try{const q=await rpc('r_quote',{t:TOKEN,lat:F.lat,lng:F.lng});$('#fPrice').textContent=ils(q.price)+' · '+q.km+' ק״מ';}catch(e){toast(e.message,true);}
+  }
+  $('#fSearch').onclick=search;
+  $('#fAddr').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search();}});
+  $('#fAddr').addEventListener('input',()=>{if($('#fAddr').value.trim()!==F.addr){F.lat=F.lng=null;$('#picked').style.display='none';$('#fPrice').textContent='—';}});
+
+  $('#bookBtn').onclick=async()=>{
+    unlockAudio();
+    if(F.lat==null){toast('חפשו את הכתובת ובחרו מהרשימה',true);return;}
+    $('#bookBtn').disabled=true;
+    try{
+      await rpc('r_book',{t:TOKEN,p_address:F.addr,p_lat:F.lat,p_lng:F.lng,p_name:$('#fName').value.trim()||null,p_phone:$('#fPhone').value.trim()||null,
+        p_size:F.size,p_ready:F.ready==='עכשיו'?'עכשיו':'בעוד '+F.ready,p_note:$('#fNote').value.trim()||null});
+      ['#fAddr','#fName','#fPhone','#fNote'].forEach(s=>$(s).value='');F.lat=F.lng=null;F.addr='';$('#picked').style.display='none';$('#fPrice').textContent='—';
+      toast('השליח הוזמן · מחפש שליח');poll();
+    }catch(e){toast(e.message,true);}
+    $('#bookBtn').disabled=false;
+  };
+
+  async function poll(){
+    clearTimeout(timer);
+    try{
+      if(!me){me=await rpc('r_me',{t:TOKEN});$('#rName0').textContent=me.name;$('#rAddr0').textContent=me.address+' · ממשק מסעדה';$('#rLogo').textContent=me.name.slice(0,1);}
+      const d=await rpc('r_orders',{t:TOKEN});
+      $('#cDot').classList.toggle('on',d.courier_online);$('#cTxt').textContent=d.courier_online?'שליח זמין':'אין שליח מחובר';
+      d.orders.forEach(o=>{if(last[o.id]&&last[o.id]!==o.status){toast(ST[o.status][0]);if(o.status==='to_rest'||o.status==='delivered')chime();}last[o.id]=o.status;});
+      renderList(d);
+    }catch(e){if(e.code==='bad_token'){gate('הקישור האישי לא תקין. בקשו קישור חדש.');return;}toast('אין חיבור לשרת',true);}
+    timer=setTimeout(poll,4000);
+  }
+  function renderList(d){
+    const card=o=>{const [lab,n,c]=ST[o.status];let info;
+      if(n===0)info=d.courier_online?'נשלח לשליחים באזור':'אין שליח מחובר כרגע';
+      else if(n===5)info='נמסר ב-'+hhmm(o.delivered_at);
+      else{const cr=o.courier||{};let dd='';if(cr.lat){const tg=n<=2?[o.restaurant.lat,o.restaurant.lng]:[o.cust_lat,o.cust_lng];dd=' · '+km(cr.lat,cr.lng,tg[0],tg[1]).toFixed(1)+' ק״מ '+(n<=2?'מכם':'מהלקוח');}
+        info=`🛵 ${esc(cr.name||'שליח')}${dd}${cr.phone?` · <a href="tel:${esc(cr.phone)}">📞</a>`:''}`;}
+      return `<div class="rcard"><div class="row"><div><div class="t1">${esc(o.cust_address)}</div><div class="t2">${esc(o.cust_name||'לקוח')} · ${esc(o.size||'')} · מוכן ${esc(o.ready||'')}</div></div><span class="chip" style="background:${c}1a;color:${c}">${lab}</span></div>
+        <div class="prog">${[1,2,3,4,5].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div>
+        <div class="row"><span class="t2">${info}</span>${n===0?`<button class="b light sm" data-cancel="${o.id}">בטל</button>`:`<span class="t2" style="margin-inline-start:auto">${ils(o.price)}</span>`}</div></div>`;};
+    const act=d.orders.filter(o=>o.status!=='delivered'),done=d.orders.filter(o=>o.status==='delivered');
+    $('#rActive').innerHTML=act.length?act.map(card).join(''):'<div class="empty">אין משלוחים פעילים</div>';
+    $('#rDone').innerHTML=done.length?done.map(card).join(''):'<div class="empty">עדיין אין</div>';
+    document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{try{const ok=await rpc('r_cancel',{t:TOKEN,p_id:b.dataset.cancel});toast(ok?'המשלוח בוטל':'שליח כבר לקח את המשלוח',!ok);poll();}catch(e){toast(e.message,true);}});
+  }
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')poll();});
+  poll();
+}
+
+function gate(msg){$('#app').innerHTML=`<div class="gate"><div><div style="font-size:44px">🛵</div><b style="color:#fff;font-size:22px">משלוחים</b><br>${msg}</div></div>`;}
+
+if(MODE==='c'&&TOKEN)courierApp();
+else if(MODE==='r'&&TOKEN)restaurantApp();
+else gate('פתחו את הקישור האישי שקיבלתם');
+</script>
+</body>
+</html>
