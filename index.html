@@ -410,7 +410,7 @@ function restaurantApp(){
     $('#daySeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{F.day=days[+b.dataset.i];F.win=null;renderWin();});
     const z=zoneWindows();$('#winLbl').textContent='חלון משלוח'+(z.label?' · '+z.label:'');
     const ws=F.day?F.day.ws:[];if(!ws.includes(F.win))F.win=null;
-    $('#winSeg').innerHTML=ws.map(w=>`<button style="flex:1 0 30%" class="${F.win===w?'on':''}">${w.replace('-','–')}</button>`).join('');
+    $('#winSeg').innerHTML=ws.map(w=>`<button dir="ltr" style="flex:1 0 30%" class="${F.win===w?'on':''}">${w.replace('-','–')}</button>`).join('');
     $('#winSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{F.win=b.textContent.replace('–','-');renderWin();});
   }
   let me=null,last={},timer=null;
@@ -454,7 +454,7 @@ function restaurantApp(){
     if(F.lat==null){toast('חפשו את הכתובת ובחרו מהרשימה',true);return;}
     let ws=null,we=null,readyTxt=F.ready==='עכשיו'?'עכשיו':'בעוד '+F.ready;
     if(WIN){if(!F.day||!F.win){toast('בחרו יום וחלון משלוח',true);return;}
-      const [s,e]=F.win.split('-');ws=at(F.day.d,s).toISOString();we=at(F.day.d,e).toISOString();readyTxt=`${F.day.label} ${s}–${e}`;}
+      const [s,e]=F.win.split('-');ws=at(F.day.d,s).toISOString();we=at(F.day.d,e).toISOString();readyTxt=`${F.day.label} \u2066${s}–${e}\u2069`;}
     $('#bookBtn').disabled=true;
     try{
       await rpc('r_book',{t:TOKEN,p_address:F.addr,p_lat:F.lat,p_lng:F.lng,p_name:$('#fName').value.trim()||null,p_phone:$('#fPhone').value.trim()||null,
