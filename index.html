@@ -310,7 +310,7 @@ function courierApp(){
       <span class="tag">${tag}</span>
       <div class="row"><div class="ic ${atRest?'':'blue'}">${atRest?'🍽️':'🏠'}</div><div><div class="t1">${esc(title)}</div><div class="t2">${esc(addr)}</div></div><div class="money">${ils(o.price)}</div></div>
       <div class="hr"></div><div class="t2">${esc(o.size||'')} · ${o.km} ק״מ${o.note?' · 📝 '+esc(o.note):''}</div>
-      <div class="btns"><a class="b dark" href="https://waze.com/ul?ll=${lat},${lng}&navigate=yes" target="_blank" rel="noopener">🧭 ניווט ב-Waze</a>
+      <div class="btns"><a class="b dark" href="https://waze.com/ul?q=${encodeURIComponent(addr)}&navigate=yes" target="_blank" rel="noopener">🧭 ניווט ב-Waze</a>
       ${phone?`<a class="b light" href="tel:${esc(phone)}">📞 ${atRest?'מסעדה':'לקוח'}</a>`:`<button class="b light" disabled style="opacity:.5">📞 אין מספר</button>`}</div></div>`);
     slider(sh,{label:btn,cls:'step',icon:ICON_ARROW('#f97316'),onDone:async()=>{
       const n=await rpc('c_advance',{t:TOKEN,p_id:o.id});
@@ -382,12 +382,15 @@ function restaurantApp(){
     const q=$('#fAddr').value.trim();if(q.length<3){toast('הקלידו כתובת מלאה',true);return;}
     $('#fSearch').textContent='…';
     try{
-      const u='https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&accept-language=he&addressdetails=1&limit=5&q='+encodeURIComponent(q);
-      const res=await (await fetch(u)).json();
+      const nomi=async s=>(await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&accept-language=he&addressdetails=1&limit=6&q='+encodeURIComponent(s))).json();
+      const num=(q.match(/\d+[א-ת]?/)||[])[0];
+      let res=await nomi(q);
+      if(!res.length&&num)res=await nomi(q.replace(num,' ').replace(/\s+/g,' ').trim());
       const box=$('#sugg');
       if(!res.length){box.style.display='block';box.innerHTML='<div style="color:#94a3b8">לא נמצא · נסו להוסיף עיר</div>';return;}
-      box.innerHTML=res.map((r,i)=>{const a=r.address||{};const nice=[[a.road,a.house_number].filter(Boolean).join(' '),a.city||a.town||a.village||a.suburb].filter(Boolean).join(', ')||r.display_name;
-        return `<div data-i="${i}">${esc(nice)}</div>`;}).join('');
+      const seen=new Set();
+      box.innerHTML=res.map((r,i)=>{const a=r.address||{};const nice=[[a.road,a.house_number||(a.road?num:'')].filter(Boolean).join(' '),a.city||a.town||a.village||a.suburb].filter(Boolean).join(', ')||r.display_name;
+        if(seen.has(nice))return '';seen.add(nice);return `<div data-i="${i}">${esc(nice)}</div>`;}).join('');
       box.style.display='block';
       box.querySelectorAll('[data-i]').forEach(el=>el.onclick=()=>pick(res[+el.dataset.i],el.textContent));
     }catch(e){toast('חיפוש הכתובת נכשל',true);}
