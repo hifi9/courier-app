@@ -469,6 +469,8 @@ function restaurantApp(){
     clearTimeout(timer);
     try{
       if(!me){me=await rpc('r_me',{t:TOKEN});$('#rName0').textContent=me.name;$('#rAddr0').textContent=me.address+' · ממשק מסעדה';$('#rLogo').textContent=me.name.slice(0,1);
+        if(me.settings&&/^[a-z0-9-]+\.png$/.test(me.settings.logo||'')){const L=$('#rLogo');L.textContent='';L.style.cssText='width:auto;min-width:48px;padding:6px 10px;background:#e4ded2';
+          const im=document.createElement('img');im.src=me.settings.logo;im.alt=me.name;im.style.cssText='height:34px;display:block';L.appendChild(im);}
         if(me.settings&&me.settings.loc_fixed===false)fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&limit=1&q='+encodeURIComponent(me.address))
           .then(r=>r.json()).then(x=>{if(x&&x[0])return rpc('r_set_location',{t:TOKEN,p_lat:+x[0].lat,p_lng:+x[0].lon});}).catch(()=>{});
         if(me.settings&&(me.settings.zones||me.settings.default_windows)){WIN=me.settings;$('#readyBox').style.display='none';$('#winBox').style.display='block';renderWin();}}
