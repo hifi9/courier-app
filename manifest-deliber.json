@@ -1,0 +1,1 @@
+{"name": "דליבר · משלוחים", "short_name": "דליבר", "display": "standalone", "background_color": "#f4f1ec", "theme_color": "#0d1628", "dir": "rtl", "lang": "he", "icons": [{"src": "icon-deliber-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-deliber-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}], "id": "restaurant-deliber"}
