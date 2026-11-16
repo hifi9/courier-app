@@ -189,6 +189,7 @@ try{
 /* ========================== COURIER ============================= */
 /* ================================================================ */
 function courierApp(){
+  document.title='Super Courier';
   $('#app').innerHTML=`
   <div id="map"></div>
   <div class="top">
@@ -203,7 +204,7 @@ function courierApp(){
   <div id="drawerWrap"><div class="drawer-bg" id="drawerBg"></div><div class="drawer">
     <div class="me"><div class="av" id="avName">•</div><div><div style="font-size:22px;font-weight:800" id="meName">…</div><div style="color:var(--mut);display:flex;align-items:center;gap:6px"><span class="dot" id="dot2"></span><span id="status2">מנותק</span></div></div></div>
     <div class="nav" data-go="home">🗺️ בית</div><div class="nav" data-go="history">🚲 היסטוריה</div><div class="nav" data-go="earnings">👛 הכנסות</div>
-    <div class="ver">משלוחים · 1.4</div></div></div>
+    <div class="ver">Super Courier · 1.4</div></div></div>
   <div class="page" id="history"><div class="ph">היסטוריית הזמנות<button data-back>✕</button></div>
     <div class="pc"><div style="display:flex;justify-content:space-between;color:#64748b;margin-bottom:12px"><b style="color:var(--ink)">📅 החודש</b><span id="monthName"></span></div>
     <div class="sum"><div><b id="hCount">0</b><span>משלוחים החודש</span></div><div><b id="hTotal">₪0</b><span>הכנסות ממשלוחים</span></div></div></div><div id="hList"></div></div>
