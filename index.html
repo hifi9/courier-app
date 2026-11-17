@@ -378,6 +378,8 @@ function restaurantApp(){
     <button class="bookbtn" id="bellBtn" style="display:none;width:auto;height:46px;font-size:16px;margin:0 14px 12px;padding:0 16px;background:var(--ink);width:calc(100% - 28px)">🔔 הפעל התראות על המשלוחים</button>
     <div class="rcard">
       <div class="t1" style="font-size:20px">הזמנת שליח</div>
+      <label class="b light" id="scanBtn" style="height:50px;margin:12px 0 2px;cursor:pointer;font-size:16px">📷 צילום בון — מילוי אוטומטי<input type="file" accept="image/*" capture="environment" id="scanIn" style="display:none"></label>
+      <div class="t2" id="scanMsg" style="display:none;margin-top:6px"></div>
       <div class="lbl">כתובת הלקוח</div>
       <div class="addr"><input class="inp" id="fAddr" placeholder="רחוב, מספר, עיר" autocomplete="off" enterkeyhint="search"><button class="srch" id="fSearch">חפש</button></div>
       <div class="sugg" id="sugg"></div><div class="picked" id="picked"></div>
@@ -460,6 +462,48 @@ function restaurantApp(){
   $('#fSearch').onclick=search;
   $('#fAddr').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search();}});
   $('#fAddr').addEventListener('input',()=>{if($('#fAddr').value.trim()!==F.addr){F.lat=F.lng=null;$('#picked').style.display='none';$('#fPrice').textContent='—';}});
+
+  /* ---- order ticket photo → address / name / phone (free, on-device OCR) ---- */
+  let ocrLib=null;
+  const loadOcr=()=>ocrLib||(ocrLib=new Promise((ok,bad)=>{const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';s.onload=()=>ok(window.Tesseract);s.onerror=bad;document.head.appendChild(s);}));
+  function prep(file){return new Promise((ok,bad)=>{const img=new Image();img.onload=()=>{
+      const sc=Math.min(1,1800/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=img.width*sc;c.height=img.height*sc;
+      const x=c.getContext('2d');x.drawImage(img,0,0,c.width,c.height);const d=x.getImageData(0,0,c.width,c.height),p=d.data;
+      for(let i=0;i<p.length;i+=4){let g=.3*p[i]+.59*p[i+1]+.11*p[i+2];g=g>150?255:g<90?0:(g-90)*4.25;p[i]=p[i+1]=p[i+2]=g;}
+      x.putImageData(d,0,0);URL.revokeObjectURL(img.src);ok(c);};img.onerror=bad;img.src=URL.createObjectURL(file);});}
+  function parseTicket(txt){
+    const lines=txt.split('\n').map(l=>l.replace(/[|_~*•]/g,' ').replace(/\s+/g,' ').trim()).filter(Boolean);
+    const out={};const flat=txt.replace(/\s+/g,' ');
+    const ph=flat.replace(/(\d)[ -](?=\d)/g,'$1').match(/0(5\d|[23489]|7\d)\d{7}/);if(ph)out.phone=ph[0].replace(/^(05\d|07\d)(\d{3})(\d{4})$/,'$1-$2$3');
+    const kv=(re,min=2)=>{for(const l of lines){const m=l.match(re);if(m&&m[1].trim().length>=min)return m[1].trim();}};
+    out.name=kv(/(?:שם(?: הלקוח| לקוח)?|לקוח)\s*[:\-]\s*(.+)/);
+    let addr=kv(/(?:כתובת(?: למשלוח| משלוח)?|משלוח ל|רחוב)\s*[:\-]\s*(.+)/);
+    if(!addr){const cand=lines.filter(l=>/[א-ת]{2,}.*\s\d{1,3}[א-ת]?(\s|,|$)/.test(l)&&!/₪|ש"ח|שח|סה"כ|מחיר|\d{2}[\/.:]\d{2}|טלפון|הזמנה|מס'/.test(l));addr=cand[0];}
+    if(addr){addr=addr.replace(/(טלפון|טל'?|נייד)\s*[:\-]?.*$/,'').trim();
+      const CIT=['תל אביב','רמת השרון','הרצליה','רעננה','כפר סבא','הוד השרון','רמת גן','גבעתיים','פתח תקווה'];
+      if(!CIT.some(c=>addr.includes(c))){const c=CIT.find(c=>flat.includes(c));if(c)addr+=', '+c;}out.addr=addr;}
+    const fl=kv(/(?:קומה)\s*[:\-]?\s*(\S+)/,1),ap=kv(/(?:דירה)\s*[:\-]?\s*(\S+)/,1);if(fl||ap)out.note=[fl&&'קומה '+fl,ap&&'דירה '+ap].filter(Boolean).join(', ');
+    return out;
+  }
+  $('#scanIn').onchange=async e=>{
+    const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;unlockAudio();
+    const msg=$('#scanMsg');msg.style.display='block';msg.textContent='⏳ קורא את הבון… (בפעם הראשונה זה לוקח כחצי דקה)';$('#scanBtn').style.opacity=.6;
+    try{
+      const T=await loadOcr(),canvas=await prep(f);
+      const {data}=await T.recognize(canvas,'heb',{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+        corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/heb@1.0.0/4.0.0_best_int',
+        logger:m=>{if(m.status==='recognizing text')msg.textContent='⏳ קורא את הבון… '+Math.round(m.progress*100)+'%';}});
+      const r=parseTicket(data.text||'');
+      if(r.name&&!$('#fName').value)$('#fName').value=r.name;
+      if(r.phone&&!$('#fPhone').value)$('#fPhone').value=r.phone;
+      if(r.note&&!$('#fNote').value)$('#fNote').value=r.note;
+      const got=[r.addr&&'כתובת',r.name&&'שם',r.phone&&'טלפון'].filter(Boolean);
+      msg.textContent=got.length?'✓ זוהו: '+got.join(', ')+' · בדקו לפני ההזמנה':'לא זוהו פרטים · נסו צילום ישר וקרוב יותר';
+      if(r.addr){$('#fAddr').value=r.addr;F.lat=F.lng=null;await search();}
+    }catch(err){msg.textContent='קריאת הבון נכשלה · נסו שוב';console.warn(err);}
+    $('#scanBtn').style.opacity=1;
+  };
 
   $('#bookBtn').onclick=async()=>{
     unlockAudio();
