@@ -203,11 +203,35 @@ function courierApp(){
   <div class="overlay" id="offerOv"><div class="offer" id="offer"></div></div>
   <div id="drawerWrap"><div class="drawer-bg" id="drawerBg"></div><div class="drawer">
     <div class="me"><div class="av" id="avName">•</div><div><div style="font-size:22px;font-weight:800" id="meName">…</div><div style="color:var(--mut);display:flex;align-items:center;gap:6px"><span class="dot" id="dot2"></span><span id="status2">מנותק</span></div></div></div>
-    <div class="nav" data-go="home">🗺️ בית</div><div class="nav" data-go="history">🚲 היסטוריה</div><div class="nav" data-go="earnings">👛 הכנסות</div>
+    <div class="nav" data-go="home">🗺️ בית</div><div class="nav" data-go="history">🚲 היסטוריה</div><div class="nav" data-go="earnings">👛 הכנסות</div><div class="nav" data-go="profile">👤 פרופיל ומסמכים</div>
     <div class="ver">Super Courier · 1.4</div></div></div>
   <div class="page" id="history"><div class="ph">היסטוריית הזמנות<button data-back>✕</button></div>
     <div class="pc"><div style="display:flex;justify-content:space-between;color:#64748b;margin-bottom:12px"><b style="color:var(--ink)">📅 החודש</b><span id="monthName"></span></div>
     <div class="sum"><div><b id="hCount">0</b><span>משלוחים החודש</span></div><div><b id="hTotal">₪0</b><span>הכנסות ממשלוחים</span></div></div></div><div id="hList"></div></div>
+  <div class="page" id="profile"><div class="ph">פרופיל ומסמכים<button data-back>✕</button></div>
+    <div class="pc" style="display:flex;flex-direction:column;gap:2px">
+      <div class="t1">פרטים אישיים</div>
+      <label class="lbl" for="pName">שם מלא</label><input class="inp" id="pName" autocomplete="name">
+      <label class="lbl" for="pPhone">טלפון</label><input class="inp" id="pPhone" inputmode="tel" autocomplete="tel" placeholder="050-0000000">
+      <label class="lbl" for="pVehicle">כלי רכב</label>
+      <select class="inp" id="pVehicle"><option>אופניים חשמליים</option><option>קטנוע</option><option>אופנוע</option><option>רכב</option></select>
+    </div>
+    <div class="pc" style="display:flex;flex-direction:column;gap:2px">
+      <div class="t1">פרטי העסק</div>
+      <label class="lbl" for="pBiz">שם העסק</label><input class="inp" id="pBiz" placeholder="לדוגמה: רועי משלוחים">
+      <label class="lbl" for="pBizNo">מספר עוסק / ח.פ</label><input class="inp" id="pBizNo" inputmode="numeric">
+      <button class="bookbtn" id="pSave" style="margin-top:16px">שמירה</button>
+    </div>
+    <div class="pc" style="display:flex;flex-direction:column;gap:12px">
+      <div class="t1">מסמכים</div>
+      <div class="t2">נשמרים בצורה פרטית · רק מנהל המערכת יכול לצפות בהם</div>
+      <div class="row"><div><div class="t1" style="font-size:16px">תעודת זהות</div><div class="t2" id="stId">לא הועלה</div></div>
+        <label class="b dark sm" style="cursor:pointer">העלאה<input type="file" accept="image/*,application/pdf" data-doc="id" style="display:none"></label></div>
+      <div class="hr" style="margin:0"></div>
+      <div class="row"><div><div class="t1" style="font-size:16px">רישיון נהיגה</div><div class="t2" id="stLicense">לא הועלה</div></div>
+        <label class="b dark sm" style="cursor:pointer">העלאה<input type="file" accept="image/*,application/pdf" data-doc="license" style="display:none"></label></div>
+    </div>
+  </div>
   <div class="page" id="upcoming"><div class="ph">משלוחים מתוכננים<button data-back>✕</button></div><div class="pc t2" style="padding:12px 16px">כל משלוח יוצע לך עם צלצול 45 דק׳ לפני תחילת החלון שלו</div><div id="uList"></div></div>
   <div class="page" id="earnings"><div class="ph">הכנסות<button data-back>✕</button></div>
     <div class="pc"><div style="color:#64748b;margin-bottom:6px">היום</div><div class="big" id="eToday">₪0.00</div>
@@ -346,7 +370,32 @@ function courierApp(){
   $('#drawerBg').onclick=()=>$('#drawerWrap').classList.remove('open');
   document.querySelectorAll('.nav').forEach(n=>n.onclick=async()=>{$('#drawerWrap').classList.remove('open');const g=n.dataset.go;if(g==='home')return;$('#'+g).classList.add('show');await renderPage(g);});
   document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>b.closest('.page').classList.remove('show'));
+  async function renderProfile(){
+    try{const p=await rpc('c_profile_get',{t:TOKEN});
+      $('#pName').value=p.name||'';$('#pPhone').value=p.phone||'';$('#pBiz').value=p.business_name||'';$('#pBizNo').value=p.business_number||'';
+      if(p.vehicle){const s=$('#pVehicle');if(![...s.options].some(o=>o.text===p.vehicle))s.add(new Option(p.vehicle));s.value=p.vehicle;}
+      $('#stId').textContent=p.has_id?'✓ הועלה':'לא הועלה';$('#stLicense').textContent=p.has_license?'✓ הועלה':'לא הועלה';
+      $('#stId').style.color=p.has_id?'#15803d':'';$('#stLicense').style.color=p.has_license?'#15803d':'';
+    }catch(e){toast(e.message,true);}
+  }
+  $('#pSave').onclick=async()=>{
+    $('#pSave').disabled=true;
+    try{await rpc('c_profile_set',{t:TOKEN,p_name:$('#pName').value,p_phone:$('#pPhone').value,p_vehicle:$('#pVehicle').value,p_business_name:$('#pBiz').value,p_business_number:$('#pBizNo').value});
+      toast('הפרטים נשמרו');poll();}catch(e){toast(e.code==='name_required'?'צריך למלא שם':e.message,true);}
+    $('#pSave').disabled=false;
+  };
+  document.querySelectorAll('[data-doc]').forEach(inp=>inp.onchange=async()=>{
+    const f=inp.files&&inp.files[0];inp.value='';if(!f)return;
+    if(f.size>8*1024*1024){toast('הקובץ גדול מדי (עד 8MB)',true);return;}
+    const st=inp.dataset.doc==='id'?$('#stId'):$('#stLicense');st.textContent='⏳ מעלה…';st.style.color='';
+    const fd=new FormData();fd.append('t',TOKEN);fd.append('kind',inp.dataset.doc);fd.append('file',f);
+    try{const r=await fetch(SB_URL+'/functions/v1/courier-doc',{method:'POST',headers:{apikey:SB_KEY},body:fd});const j=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error({bad_type:'סוג קובץ לא נתמך (תמונה או PDF)',too_big:'הקובץ גדול מדי'}[j.error]||'ההעלאה נכשלה');
+      toast('המסמך הועלה');}catch(e){toast(e.message,true);}
+    renderProfile();
+  });
   async function renderPage(g){
+    if(g==='profile'){await renderProfile();return;}
     let H=[];try{H=await rpc('c_history',{t:TOKEN});}catch(e){toast(e.message,true);}
     const now=new Date();
     if(g==='history'){
