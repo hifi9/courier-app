@@ -431,13 +431,20 @@ function restaurantApp(){
       const num=(q.match(/\d+[א-ת]?/)||[])[0];
       let res=await nomi(q);
       if(!res.length&&num)res=await nomi(q.replace(num,' ').replace(/\s+/g,' ').trim());
+      // street missing from the free map: fall back to the city's location, keep the typed address for the courier and Waze
+      if(!res.length){
+        const CITIES=['תל אביב','רמת השרון','הרצליה','רעננה','כפר סבא','הוד השרון','רמת גן','גבעתיים','פתח תקווה','חולון','בת ים','בני ברק','ראשון לציון','נתניה','כפר שמריהו'];
+        const city=CITIES.find(c=>q.replace(/[-־]/g,' ').includes(c));
+        if(city){const cr=await nomi(city);if(cr.length){const r=cr[0];r._approx=true;r._typed=q;r._cityName=city;res=[r];}}
+      }
       const box=$('#sugg');
       if(!res.length){box.style.display='block';box.innerHTML='<div style="color:#94a3b8">לא נמצא · נסו להוסיף עיר</div>';return;}
       const seen=new Set();
-      box.innerHTML=res.map((r,i)=>{const a=r.address||{};const nice=[[a.road,a.house_number||(a.road?num:'')].filter(Boolean).join(' '),a.city||a.town||a.village||a.suburb].filter(Boolean).join(', ')||r.display_name;
+      box.innerHTML=res.map((r,i)=>{if(r._approx){r._city=r._cityName;return `<div data-i="${i}">📍 ${esc(r._typed)} <span style="color:#94a3b8">· מיקום משוער לפי העיר</span></div>`;}
+        const a=r.address||{};const nice=[[a.road,a.house_number||(a.road?num:'')].filter(Boolean).join(' '),a.city||a.town||a.village||a.suburb].filter(Boolean).join(', ')||r.display_name;
         if(seen.has(nice))return '';seen.add(nice);r._city=a.city||a.town||a.village||'';return `<div data-i="${i}">${esc(nice)}</div>`;}).join('');
       box.style.display='block';
-      box.querySelectorAll('[data-i]').forEach(el=>el.onclick=()=>pick(res[+el.dataset.i],el.textContent));
+      box.querySelectorAll('[data-i]').forEach(el=>el.onclick=()=>{const r=res[+el.dataset.i];pick(r,r._approx?r._typed:el.textContent);});
     }catch(e){toast('חיפוש הכתובת נכשל',true);}
     finally{$('#fSearch').textContent='חפש';}
   }
