@@ -433,10 +433,10 @@ function restaurantApp(){
       if(!res.length&&num)res=await nomi(q.replace(num,' ').replace(/\s+/g,' ').trim());
       // street missing from the free map: fall back to the city's location, keep the typed address for the courier and Waze
       if(!res.length){
-        const CITIES=['תל אביב','רמת השרון','הרצליה','רעננה','כפר סבא','הוד השרון','רמת גן','גבעתיים','פתח תקווה','חולון','בת ים','בני ברק','ראשון לציון','נתניה','כפר שמריהו'];
+        const CITIES=['תל אביב','הרצליה','רמת השרון','הרצליה','רעננה','כפר סבא','הוד השרון','רמת גן','גבעתיים','פתח תקווה','חולון','בת ים','בני ברק','ראשון לציון','נתניה','כפר שמריהו'];
         const found=CITIES.find(c=>q.replace(/[-־]/g,' ').includes(c));
         const home=((me&&me.address)||'').split(',').pop().trim();
-        const opts=found?[found]:[...new Set([home,'תל אביב'].filter(Boolean))];
+        const opts=found?[found]:[...new Set([home,'תל אביב','הרצליה'].filter(Boolean))];
         for(const city of opts){const cr=await nomi(city);if(cr.length){const r=cr[0];r._approx=true;r._cityName=city;r._typed=found?q:q+', '+city;res.push(r);}}
       }
       const box=$('#sugg');
@@ -451,9 +451,11 @@ function restaurantApp(){
     finally{$('#fSearch').textContent='חפש';}
   }
   async function pick(r,nice){
-    F.lat=+r.lat;F.lng=+r.lon;F.addr=nice;F.city=r._city||'';renderWin();$('#fAddr').value=nice;$('#sugg').style.display='none';
+    F.lat=+r.lat;F.lng=+r.lon;F.addr=nice;F.city=r._city||'';F.approx=r._approx?r._cityName:null;renderWin();$('#fAddr').value=nice;$('#sugg').style.display='none';
     $('#picked').style.display='block';$('#picked').textContent='✓ '+nice;
-    try{const q=await rpc('r_quote',{t:TOKEN,lat:F.lat,lng:F.lng});$('#fPrice').textContent=ils(q.price)+' · '+q.km+' ק״מ';}catch(e){toast(e.message,true);}
+    try{const q=F.approx?await rpc('r_quote_approx',{t:TOKEN,p_city:F.approx,p_lat:F.lat,p_lng:F.lng}):await rpc('r_quote',{t:TOKEN,lat:F.lat,lng:F.lng});
+      if(F.approx){F.lat=q.lat;F.lng=q.lng;}
+      $('#fPrice').textContent=ils(q.price)+(q.fixed?' · מחיר קבוע':' · '+q.km+' ק״מ');}catch(e){toast(e.message,true);}
   }
   $('#fSearch').onclick=search;
   $('#fAddr').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search();}});
@@ -467,9 +469,9 @@ function restaurantApp(){
       const [s,e]=F.win.split('-');ws=at(F.day.d,s).toISOString();we=at(F.day.d,e).toISOString();readyTxt=`${F.day.label} \u2066${s}–${e}\u2069`;}
     $('#bookBtn').disabled=true;
     try{
-      await rpc('r_book',{t:TOKEN,p_address:F.addr,p_lat:F.lat,p_lng:F.lng,p_name:$('#fName').value.trim()||null,p_phone:$('#fPhone').value.trim()||null,
+      await rpc('r_book_v2',{t:TOKEN,p_approx_city:F.approx||null,p_address:F.addr,p_lat:F.lat,p_lng:F.lng,p_name:$('#fName').value.trim()||null,p_phone:$('#fPhone').value.trim()||null,
         p_size:F.size,p_ready:readyTxt,p_note:$('#fNote').value.trim()||null,p_window_start:ws,p_window_end:we});
-      ['#fAddr','#fName','#fPhone','#fNote'].forEach(s=>$(s).value='');F.lat=F.lng=null;F.addr='';F.city='';F.win=null;renderWin();$('#picked').style.display='none';$('#fPrice').textContent='—';
+      ['#fAddr','#fName','#fPhone','#fNote'].forEach(s=>$(s).value='');F.lat=F.lng=null;F.addr='';F.city='';F.approx=null;F.win=null;renderWin();$('#picked').style.display='none';$('#fPrice').textContent='—';
       toast('השליח הוזמן · מחפש שליח');poll();
     }catch(e){toast(e.message,true);}
     $('#bookBtn').disabled=false;
