@@ -434,8 +434,10 @@ function restaurantApp(){
       // street missing from the free map: fall back to the city's location, keep the typed address for the courier and Waze
       if(!res.length){
         const CITIES=['תל אביב','רמת השרון','הרצליה','רעננה','כפר סבא','הוד השרון','רמת גן','גבעתיים','פתח תקווה','חולון','בת ים','בני ברק','ראשון לציון','נתניה','כפר שמריהו'];
-        const city=CITIES.find(c=>q.replace(/[-־]/g,' ').includes(c));
-        if(city){const cr=await nomi(city);if(cr.length){const r=cr[0];r._approx=true;r._typed=q;r._cityName=city;res=[r];}}
+        const found=CITIES.find(c=>q.replace(/[-־]/g,' ').includes(c));
+        const home=((me&&me.address)||'').split(',').pop().trim();
+        const opts=found?[found]:[...new Set([home,'תל אביב'].filter(Boolean))];
+        for(const city of opts){const cr=await nomi(city);if(cr.length){const r=cr[0];r._approx=true;r._cityName=city;r._typed=found?q:q+', '+city;res.push(r);}}
       }
       const box=$('#sugg');
       if(!res.length){box.style.display='block';box.innerHTML='<div style="color:#94a3b8">לא נמצא · נסו להוסיף עיר</div>';return;}
