@@ -414,7 +414,7 @@ function courierApp(){
 /* ================================================================ */
 function restaurantApp(){
   $('#app').innerHTML=`<div class="rest">
-    <div class="rh"><div class="logo" id="rLogo">•</div><div><div class="t1" id="rName0">…</div><div class="t2" id="rAddr0"></div></div><div class="cstat"><span class="dot" id="cDot"></span><span id="cTxt">שליח</span></div></div>
+    <div class="rh"><div class="logo" id="rLogo">•</div><div><div class="t1" id="rName0">…</div><div class="t2" id="rAddr0"></div></div><div class="cstat"><span class="dot" id="cDot"></span><span id="cTxt" style="max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="this.style.whiteSpace=this.style.whiteSpace==='nowrap'?'normal':'nowrap'">שליח</span></div></div>
     <button class="bookbtn" id="bellBtn" style="display:none;width:auto;height:46px;font-size:16px;margin:0 14px 12px;padding:0 16px;background:var(--ink);width:calc(100% - 28px)">🔔 הפעל התראות על המשלוחים</button>
     <div class="rcard">
       <div class="t1" style="font-size:20px">הזמנת שליח</div>
@@ -540,7 +540,7 @@ function restaurantApp(){
           .then(r=>r.json()).then(x=>{if(x&&x[0])return rpc('r_set_location',{t:TOKEN,p_lat:+x[0].lat,p_lng:+x[0].lon});}).catch(()=>{});
         if(me.settings&&(me.settings.zones||me.settings.default_windows)){WIN=me.settings;$('#readyBox').style.display='none';$('#winBox').style.display='block';renderWin();}}
       const d=await rpc('r_orders',{t:TOKEN});
-      $('#cDot').classList.toggle('on',d.courier_online);$('#cTxt').textContent=d.courier_online?'שליח זמין':'אין שליח מחובר';
+      $('#cDot').classList.toggle('on',d.courier_online);{const L=d.couriers||[];const T=L.length?'מחוברים: '+L.join(', '):(d.courier_online?'שליח זמין':'אין שליח מחובר');$('#cTxt').textContent=T;$('#cTxt').title=T;}
       d.orders.forEach(o=>{if(last[o.id]&&last[o.id]!==o.status){toast(ST[o.status][0]);if(o.status==='to_rest'||o.status==='delivered')chime();}last[o.id]=o.status;});
       renderList(d);
     }catch(e){if(e.code==='bad_token'){gate('הקישור האישי לא תקין. בקשו קישור חדש.');return;}toast('אין חיבור לשרת',true);}
