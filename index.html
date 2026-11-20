@@ -497,7 +497,7 @@ function restaurantApp(){
     $('#recent').innerHTML=RECENT.map((a,i)=>`<button type="button" data-r="${i}" style="border:1.5px solid #e2e8f0;background:#fff;border-radius:20px;padding:8px 12px;font:600 14px Heebo,sans-serif;color:#334155;cursor:pointer;text-align:right">📍 ${esc(a.address.split(',')[0])}${a.name?` <span style="color:#94a3b8">· ${esc(a.name)}</span>`:''}</button>`).join('');
     $('#recent').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const a=RECENT[+b.dataset.r];
       $('#fName').value=a.name||'';$('#fPhone').value=a.phone||'';
-      pick({lat:a.lat,lon:a.lng,_city:(a.address.split(',')[1]||'').trim()},a.address);});
+      pick({lat:a.lat,lon:a.lng,_city:a.approx||(a.address.split(',')[1]||'').trim(),_approx:!!a.approx,_cityName:a.approx},a.address);});
   }
   loadRecent();
 
