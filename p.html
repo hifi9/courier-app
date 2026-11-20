@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>תמונת מסירה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f4f1ec;font-family:Heebo,system-ui,sans-serif;color:#0d1628}
+.wrap{max-width:520px;margin:0 auto;padding:24px 16px 40px;display:flex;flex-direction:column;gap:16px;align-items:center;text-align:center}
+.logo{height:56px;border-radius:14px}.logo.sq{width:72px;height:72px}
+h1{margin:0;font-size:26px;font-weight:800}
+.t2{color:#64748b;font-size:16px}
+.ph{width:100%;border-radius:20px;box-shadow:0 8px 24px #0002;background:#fff}
+.err{color:#64748b;padding:40px 0}
+</style>
+</head>
+<body>
+<div class="wrap" id="w"><div class="err">טוען…</div></div>
+<script>
+(async()=>{
+  const w=document.getElementById('w'),k=new URLSearchParams(location.search).get('k')||'';
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  try{
+    const r=await fetch('https://inkbvfewxwnedfmkjxti.supabase.co/rest/v1/rpc/photo_page',{method:'POST',
+      headers:{apikey:'sb_publishable_Dw89LyAhNT2PTRVraI3OCA_CMTuMN__','Content-Type':'application/json'},body:JSON.stringify({k})});
+    const d=await r.json();
+    if(!d){w.innerHTML='<div class="err">התמונה לא נמצאה</div>';return;}
+    const when=d.delivered_at?new Date(d.delivered_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    w.innerHTML=(d.logo&&/^[a-z0-9-]+\.png$/.test(d.logo)?`<img class="logo ${d.logo_square?'sq':''}" src="${esc(d.logo)}" alt="${esc(d.restaurant)}">`:'')+
+      `<h1>ההזמנה שלך נמסרה 📦</h1><div class="t2">${esc(d.restaurant)}${when?' · '+esc(when):''}</div>`+
+      `<img class="ph" src="${esc(d.photo_url)}" alt="תמונת מסירה">`;
+  }catch(e){w.innerHTML='<div class="err">לא ניתן לטעון את התמונה</div>';}
+})();
+</script>
+</body>
+</html>
