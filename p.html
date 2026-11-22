@@ -28,7 +28,7 @@ h1{margin:0;font-size:26px;font-weight:800}
     const d=await r.json();
     if(!d){w.innerHTML='<div class="err">התמונה לא נמצאה</div>';return;}
     const when=d.delivered_at?new Date(d.delivered_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    w.innerHTML=(d.logo&&/^[a-z0-9-]+\.png$/.test(d.logo)?`<img class="logo ${d.logo_square?'sq':''}" src="${esc(d.logo)}" alt="${esc(d.restaurant)}">`:'')+
+    w.innerHTML=(d.logo&&(/^[a-z0-9-]+\.png$/.test(d.logo)||/^https:\/\/inkbvfewxwnedfmkjxti\.supabase\.co\/storage\/v1\/object\/public\/business-logos\/[\w\/.-]+$/.test(d.logo))?`<img class="logo ${d.logo_square?'sq':''}" src="${esc(d.logo)}" alt="${esc(d.restaurant)}">`:'')+
       `<h1>ההזמנה שלך נמסרה 📦</h1><div class="t2">${esc(d.restaurant)}${when?' · '+esc(when):''}</div>`+
       `<img class="ph" src="${esc(d.photo_url)}" alt="תמונת מסירה">`;
   }catch(e){w.innerHTML='<div class="err">לא ניתן לטעון את התמונה</div>';}
