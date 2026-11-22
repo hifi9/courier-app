@@ -227,6 +227,8 @@ function courierApp(){
       <div class="t1">פרטי העסק</div>
       <label class="lbl" for="pBiz">שם העסק</label><input class="inp" id="pBiz" placeholder="לדוגמה: רועי משלוחים">
       <label class="lbl" for="pBizNo">מספר עוסק / ח.פ · לחשבונית</label><input class="inp" id="pBizNo" inputmode="numeric">
+      <label class="lbl" for="pPay">קישור תשלום קבוע · דרכו העסקים משלמים לך</label><input class="inp" id="pPay" type="url" inputmode="url" dir="ltr" placeholder="https://…" autocomplete="off">
+      <div class="t2" style="font-size:13px;margin-top:4px">דף תשלום עם סכום פתוח מתוכנת החשבוניות שלך (סאמיט, iCount, מורנינג). הקבלה יוצאת ממנה אוטומטית.</div>
       <button class="bookbtn" id="pSave" style="margin-top:16px">שמירה</button>
     </div>
   <div class="page" id="upcoming"><div class="ph">משלוחים מתוכננים<button data-back>✕</button></div><div class="pc t2" style="padding:12px 16px">כל משלוח יוצע לך עם צלצול 45 דק׳ לפני תחילת החלון שלו</div><div id="uList"></div></div>
@@ -379,13 +381,13 @@ function courierApp(){
   document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>b.closest('.page').classList.remove('show'));
   async function renderProfile(){
     try{const p=await rpc('c_profile_get',{t:TOKEN});
-      $('#pName').value=p.name||'';$('#pPhone').value=p.phone||'';$('#pBiz').value=p.business_name||'';$('#pBizNo').value=p.business_number||'';
+      $('#pName').value=p.name||'';$('#pPhone').value=p.phone||'';$('#pBiz').value=p.business_name||'';$('#pBizNo').value=p.business_number||'';$('#pPay').value=p.pay_link||'';
       if(p.vehicle){const s=$('#pVehicle');if(![...s.options].some(o=>o.text===p.vehicle))s.add(new Option(p.vehicle));s.value=p.vehicle;}
     }catch(e){toast(e.message,true);}
   }
   $('#pSave').onclick=async()=>{
     $('#pSave').disabled=true;
-    try{await rpc('c_profile_set',{t:TOKEN,p_name:$('#pName').value,p_phone:$('#pPhone').value,p_vehicle:$('#pVehicle').value,p_business_name:$('#pBiz').value,p_business_number:$('#pBizNo').value});
+    try{await rpc('c_profile_set',{t:TOKEN,p_name:$('#pName').value,p_phone:$('#pPhone').value,p_vehicle:$('#pVehicle').value,p_business_name:$('#pBiz').value,p_business_number:$('#pBizNo').value,p_pay_link:$('#pPay').value.trim()});
       toast('הפרטים נשמרו');poll();}catch(e){toast(e.code==='name_required'?'צריך למלא שם':e.message,true);}
     $('#pSave').disabled=false;
   };
@@ -538,6 +540,9 @@ function restaurantApp(){
       <div class="t2">${esc(me.name)} · ${esc(me.address)}</div>
       <div class="lbl" style="margin-top:14px">טלפון העסק · השליח מתקשר אליו באיסוף</div>
       <input class="inp" id="bizPhone" inputmode="tel" placeholder="050-0000000" value="${esc(me.phone||'')}">
+      ${me.settings&&me.settings.billing_ui?`<div class="lbl" style="margin-top:14px">אימייל ייעודי לקבלות</div>
+      <input class="inp" id="bizMail" type="email" inputmode="email" dir="ltr" placeholder="scan@…" value="${esc(me.billing_email||'')}">
+      <div class="t2" style="font-size:13px;margin-top:4px">לכתובת זו יישלחו הקבלות מהשליחים. מומלץ: כתובת הסריקה של תוכנת הנהלת החשבונות, כך שהקבלה נקלטת ישר כהוצאה.</div>`:''}
       <div class="lbl" style="margin-top:14px">כתובת העסק · ממנה השליח אוסף ולפיה מחושב המחיר</div>
       <input class="inp" id="bizAddr" placeholder="רחוב, מספר, עיר" value="${esc(me.address||'')}">
       <div class="lbl" style="margin-top:14px">לוגו העסק</div>
@@ -577,6 +582,7 @@ function restaurantApp(){
     $('#bizSave').onclick=async()=>{const btn=$('#bizSave');btn.disabled=true;
       try{
         const r=await rpc('r_set_phone',{t:TOKEN,p_phone:$('#bizPhone').value});me.phone=r.phone;
+        if($('#bizMail')){const m=await rpc('r_set_billing_email',{t:TOKEN,p_email:$('#bizMail').value});me.billing_email=m.billing_email;}
         const na=$('#bizAddr').value.trim();
         if(na&&na!==me.address){
           const g=await (await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&limit=1&q='+encodeURIComponent(na))).json();
