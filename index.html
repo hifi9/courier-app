@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0d1628">
-<script>(function(){var q=new URLSearchParams(location.search),m=q.get('r')?'r':q.get('c')?'c':null;try{m=m||localStorage.getItem('cr_mode');}catch(e){}
+<script>(function(){var q=new URLSearchParams(location.search),m=q.get('r')?'r':(q.get('c')||q.get('j'))?'c':null;try{m=m||localStorage.getItem('cr_mode');}catch(e){}
 var b=q.get('b');try{if(b)localStorage.setItem('cr_brand',b);else if(q.get('r')||q.get('c'))localStorage.removeItem('cr_brand');else b=localStorage.getItem('cr_brand');}catch(e){}
 if(b&&!/^[a-z0-9-]{2,30}$/.test(b))b=null;
 var l=document.createElement('link');l.rel='manifest';l.href=m==='r'?(b?'manifest-'+b+'.json':'manifest-r.json'):'manifest-c.json';document.head.appendChild(l);
@@ -416,6 +416,13 @@ function restaurantApp(){
   $('#app').innerHTML=`<div class="rest">
     <div class="rh"><div class="logo" id="rLogo">•</div><div><div class="t1" id="rName0">…</div><div class="t2" id="rAddr0"></div></div><div class="cstat"><span class="dot" id="cDot"></span><span id="cTxt" style="max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="this.style.whiteSpace=this.style.whiteSpace==='nowrap'?'normal':'nowrap'">שליח</span></div></div>
     <button class="bookbtn" id="bellBtn" style="display:none;width:auto;height:46px;font-size:16px;margin:0 14px 12px;padding:0 16px;background:var(--ink);width:calc(100% - 28px)">🔔 הפעל התראות על המשלוחים</button>
+    <div id="teamRow" style="display:none;gap:10px;margin:0 14px 12px">
+      <button class="bookbtn" id="profBtn" style="flex:1;height:46px;font-size:16px;background:#fff;color:var(--ink);border:1.5px solid #e2e8f0">👤 פרופיל העסק</button>
+      <button class="bookbtn" id="teamBtn" style="flex:1;height:46px;font-size:16px;background:var(--ink)">🛵 הצוות שלי</button>
+    </div>
+    <div id="rSheet" style="display:none;position:fixed;inset:0;background:#0009;z-index:20;align-items:flex-end" onclick="if(event.target===this)this.style.display='none'">
+      <div style="background:#fff;color:var(--ink);width:100%;border-radius:24px 24px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto" id="rSheetIn"></div>
+    </div>
     <div class="rcard">
       <div class="t1" style="font-size:20px">הזמנת שליח</div>
       <div class="lbl">כתובת הלקוח</div>
@@ -516,6 +523,31 @@ function restaurantApp(){
   }
   loadRecent();
 
+  /* ---- business profile + courier team (enabled per business via settings.team_ui) ---- */
+  function sheet(html){$('#rSheetIn').innerHTML=html;$('#rSheet').style.display='flex';}
+  function closeSheet(){$('#rSheet').style.display='none';}
+  function openProfile(){
+    sheet(`<div class="t1" style="font-size:20px;margin-bottom:4px">פרופיל העסק</div>
+      <div class="t2">${esc(me.name)} · ${esc(me.address)}</div>
+      <div class="lbl" style="margin-top:14px">טלפון העסק · השליח מתקשר אליו באיסוף</div>
+      <input class="inp" id="bizPhone" inputmode="tel" placeholder="050-0000000" value="${esc(me.phone||'')}">
+      <button class="bookbtn" id="bizSave" style="margin-top:14px;height:50px;font-size:18px">שמירה</button>`);
+    $('#bizSave').onclick=async()=>{try{const r=await rpc('r_set_phone',{t:TOKEN,p_phone:$('#bizPhone').value});me.phone=r.phone;toast('הטלפון נשמר');closeSheet();}catch(e){toast(e.message,true);}};
+  }
+  async function openTeam(){
+    const url=location.origin+location.pathname+'?j='+encodeURIComponent(me.join_code||'');
+    const msg=`הצטרפות לצוות השליחים של ${me.name} באפליקציית Super Courier:\n${url}`;
+    sheet(`<div class="t1" style="font-size:20px;margin-bottom:10px">הצוות שלי</div><div id="teamList" class="t2">טוען…</div>
+      <button class="bookbtn" id="addCour" style="margin-top:16px;height:50px;font-size:18px">➕ הוספת שליח</button>
+      <div class="t2" style="font-size:13px;margin-top:8px">שולחים לשליח קישור · הוא לוחץ ומצטרף לצוות שלכם מיד, בלי הרשמה</div>`);
+    $('#addCour').onclick=async()=>{
+      if(navigator.share){try{await navigator.share({title:'Super Courier',text:msg});return;}catch(e){if(e.name==='AbortError')return;}}
+      location.href='https://wa.me/?text='+encodeURIComponent(msg);};
+    try{const T=await rpc('r_team',{t:TOKEN});
+      $('#teamList').innerHTML=T.length?T.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eef2f7"><span class="dot${c.online?' on':''}"></span><b style="flex:1;color:var(--ink)">${esc(c.name)}</b>${c.phone?`<a href="tel:${esc(c.phone)}" style="text-decoration:none">📞</a>`:''}</div>`).join(''):'עדיין אין שליחים בצוות';
+    }catch(e){$('#teamList').textContent=e.message;}
+  }
+
   $('#bookBtn').onclick=async()=>{
     unlockAudio();
     if(F.lat==null){toast('חפשו את הכתובת ובחרו מהרשימה',true);return;}
@@ -540,6 +572,7 @@ function restaurantApp(){
           const im=document.createElement('img');im.src=me.settings.logo;im.alt=me.name;im.style.cssText=sqr?'width:48px;height:48px;display:block':'height:34px;display:block';L.appendChild(im);}
         if(me.settings&&me.settings.loc_fixed===false)fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&limit=1&q='+encodeURIComponent(me.address))
           .then(r=>r.json()).then(x=>{if(x&&x[0])return rpc('r_set_location',{t:TOKEN,p_lat:+x[0].lat,p_lng:+x[0].lon});}).catch(()=>{});
+        if(me.settings&&me.settings.team_ui){$('#teamRow').style.display='flex';$('#profBtn').onclick=openProfile;$('#teamBtn').onclick=openTeam;}
         if(me.settings&&(me.settings.zones||me.settings.default_windows)){WIN=me.settings;$('#readyBox').style.display='none';$('#winBox').style.display='block';renderWin();}}
       const d=await rpc('r_orders',{t:TOKEN});
       $('#cDot').classList.toggle('on',d.courier_online);{const L=d.couriers||[];const T=L.length?'מחוברים: '+L.join(', '):(d.courier_online?'שליח זמין':'אין שליח מחובר');$('#cTxt').textContent=T;$('#cTxt').title=T;}
@@ -579,7 +612,24 @@ function restaurantApp(){
 
 function gate(msg){$('#app').innerHTML=`<div class="gate"><div><div style="font-size:44px">🛵</div><b style="color:#fff;font-size:22px">משלוחים</b><br>${msg}</div></div>`;}
 
-if(MODE==='c'&&TOKEN)courierApp();
+async function joinFlow(code){
+  gate('טוען…');
+  let info=null;try{info=await rpc('c_join_info',{p_code:code});}catch(e){}
+  if(!info){gate('קישור ההצטרפות לא תקין');return;}
+  const had=(()=>{try{return localStorage.getItem('cr_mode')==='c'&&localStorage.getItem('cr_token');}catch(e){return null;}})();
+  $('#app').innerHTML=`<div class="gate"><div style="max-width:340px">
+    ${info.logo&&/^[a-z0-9-]+\.png$/.test(info.logo)?`<img src="${info.logo}" alt="" style="max-height:64px;max-width:200px;background:#fff;border-radius:14px;padding:8px">`:'<div style="font-size:44px">🛵</div>'}
+    <div style="color:#fff;font-size:22px;font-weight:800;margin:14px 0 6px">הצטרפות לצוות השליחים של ${esc(info.name)}</div>
+    <div>תקבלו ממנו משלוחים באפליקציית Super Courier. בלי הרשמה · את השם והטלפון ממלאים אחר כך בפרופיל.</div>
+    ${had?'<div style="margin-top:10px;color:#fbbf24;font-size:15px">במכשיר הזה כבר מחובר שליח. הצטרפות תיצור חשבון שליח חדש במקומו.</div>':''}
+    <button class="bookbtn" id="joinBtn" style="margin-top:18px">הצטרפות</button></div></div>`;
+  $('#joinBtn').onclick=async()=>{$('#joinBtn').disabled=true;
+    try{const r=await rpc('c_join',{p_code:code});location.replace(location.pathname+'?c='+encodeURIComponent(r.token));}
+    catch(e){toast(e.message,true);$('#joinBtn').disabled=false;}};
+}
+
+if(qs.get('j'))joinFlow(qs.get('j'));
+else if(MODE==='c'&&TOKEN)courierApp();
 else if(MODE==='r'&&TOKEN)restaurantApp();
 else gate('פתחו את הקישור האישי שקיבלתם');
 </script>
