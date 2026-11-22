@@ -545,7 +545,7 @@ function restaurantApp(){
         <div id="bizLogoPrev" style="min-width:56px;height:56px;border-radius:14px;background:#e4ded2;display:grid;place-items:center;padding:6px;overflow:hidden">${okLogo(me.settings&&me.settings.logo)?`<img src="${esc(me.settings.logo)}" alt="" style="max-height:44px;max-width:110px">`:esc(me.name.slice(0,1))}</div>
         <label class="bookbtn" style="flex:1;height:46px;font-size:16px;background:#fff;color:var(--ink);border:1.5px solid #e2e8f0;display:grid;place-items:center;cursor:pointer">📷 העלאת לוגו<input type="file" id="bizLogo" accept="image/*" style="display:none"></label>
       </div>
-      <div style="margin-top:20px;font-weight:800;font-size:18px">מחירון משלוחים</div><div class="t2" style="font-size:14px">מחירים מומלצים לפי קבוצת "משלוחים ונהנים" · ללא מע״מ</div>
+      <div style="margin-top:20px;font-weight:800;font-size:18px">מחירון משלוחים</div><div class="t2" style="font-size:14px">המחיר שהעסק משלם לשליח</div><div class="t2" style="font-size:14px">מחירים מומלצים לפי קבוצת "משלוחים ונהנים" · ללא מע״מ</div>
       <div id="priceBox"></div>
       <button class="bookbtn" id="bizSave" style="margin-top:16px;height:50px;font-size:18px">שמירה</button>`);
     let PR=null,useTpl=false;
