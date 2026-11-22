@@ -545,12 +545,12 @@ function restaurantApp(){
         <div id="bizLogoPrev" style="min-width:56px;height:56px;border-radius:14px;background:#e4ded2;display:grid;place-items:center;padding:6px;overflow:hidden">${okLogo(me.settings&&me.settings.logo)?`<img src="${esc(me.settings.logo)}" alt="" style="max-height:44px;max-width:110px">`:esc(me.name.slice(0,1))}</div>
         <label class="bookbtn" style="flex:1;height:46px;font-size:16px;background:#fff;color:var(--ink);border:1.5px solid #e2e8f0;display:grid;place-items:center;cursor:pointer">📷 העלאת לוגו<input type="file" id="bizLogo" accept="image/*" style="display:none"></label>
       </div>
-      <div class="lbl" style="margin-top:16px">מחירון משלוחים · המחיר שהעסק משלם לשליח</div>
+      <div style="margin-top:20px;font-weight:800;font-size:18px">מחירון משלוחים</div><div class="t2" style="font-size:14px">המחיר שהעסק משלם לשליח</div>
       <div id="priceBox"></div>
       <button class="bookbtn" id="bizSave" style="margin-top:16px;height:50px;font-size:18px">שמירה</button>`);
     let PR=null,useTpl=false;
     const drawPrices=rules=>{PR=rules;const rows=rules.map((r,i)=>({r,i})).sort((a,b)=>a.r.price-b.r.price);
-      $('#priceBox').innerHTML=`<div class="t2" style="font-size:13px;margin-bottom:6px">${useTpl?'מחירון מומלץ · אפשר לשנות כל מחיר ואז לשמור':'יעד שלא ברשימה מחושב לפי מרחק'}</div>`+rows.map(({r,i})=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #eef2f7"><span style="flex:1;font-weight:500;font-size:14px">${esc(r.label||(r.m||[]).join(' / '))}</span><span style="font-weight:700;font-size:18px">₪</span><input class="inp" data-pi="${i}" inputmode="numeric" value="${esc(r.price)}" style="width:84px;height:44px;text-align:center;font-weight:800;font-size:20px"></div>`).join('');};
+      $('#priceBox').innerHTML=`<div class="t2" style="font-size:13px;margin-bottom:6px">${useTpl?'מחירון מומלץ · אפשר לשנות כל מחיר ואז לשמור':'יעד שלא ברשימה מחושב לפי מרחק'}</div>`+rows.map(({r,i})=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #eef2f7"><span style="flex:1;font-weight:500;font-size:15px">${esc(r.label||(r.m||[]).join(' / '))}</span><span class="t2">₪</span><input class="inp" data-pi="${i}" inputmode="numeric" value="${esc(r.price)}" style="width:80px;height:40px;text-align:center"></div>`).join('');};
     if(me.settings&&Array.isArray(me.settings.fixed)&&me.settings.fixed.length)drawPrices(me.settings.fixed);
     else{$('#priceBox').innerHTML=`<div class="t2" style="font-size:14px">כרגע המחיר מחושב לפי מרחק.</div><button class="bookbtn" id="tplBtn" style="margin-top:8px;height:44px;font-size:16px;background:#fff;color:var(--ink);border:1.5px solid #e2e8f0">טעינת מחירון מומלץ</button>`;
       $('#tplBtn').onclick=async()=>{try{const tp=await rpc('price_template',{});useTpl=true;drawPrices(tp);}catch(e){toast(e.message,true);}};}
