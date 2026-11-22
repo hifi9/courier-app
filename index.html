@@ -570,8 +570,8 @@ function restaurantApp(){
       if(!me){me=await rpc('r_me',{t:TOKEN});$('#rName0').textContent=me.name;$('#rAddr0').textContent=me.address+' · ממשק מסעדה';$('#rLogo').textContent=me.name.slice(0,1);
         if(me.settings&&/^[a-z0-9-]+\.png$/.test(me.settings.logo||'')){const L=$('#rLogo');L.textContent='';const sqr=me.settings.logo_square;L.style.cssText=sqr?'padding:0;overflow:hidden;background:#000':'width:auto;min-width:48px;padding:6px 10px;background:#e4ded2';
           const im=document.createElement('img');im.src=me.settings.logo;im.alt=me.name;im.style.cssText=sqr?'width:48px;height:48px;display:block':'height:34px;display:block';L.appendChild(im);}
-        if(me.settings&&/^[a-z0-9-]+\.png$/.test(me.settings.co_logo||'')){const co=document.createElement('img');co.src=me.settings.co_logo;co.alt='Super Courier';co.title='Super Courier';
-          co.style.cssText='width:48px;height:48px;border-radius:14px;flex:none;display:block;margin-inline-start:-4px';$('#rLogo').after(co);
+        if(me.settings&&/^[a-z0-9-]+\.png$/.test(me.settings.co_logo||'')){const co=document.createElement('div');co.style.cssText='flex:none;display:flex;flex-direction:column;align-items:center;gap:2px';
+          co.innerHTML=`<img src="${me.settings.co_logo}" alt="" style="width:44px;height:44px;border-radius:50%;display:block"><span style="font:700 10px Heebo,sans-serif;color:#111;white-space:nowrap" dir="ltr">Super Courier</span>`;$('#rLogo').after(co);
           const rh=$('.rh');rh.style.flexWrap='wrap';const cs=rh.querySelector('.cstat');cs.style.marginInlineStart='0';const br=document.createElement('div');br.style.cssText='flex-basis:100%;height:0';cs.before(br);const nd=$('#rName0').parentElement;nd.style.flex='1 1 0';nd.style.minWidth='0';}
         if(me.settings&&me.settings.loc_fixed===false)fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&limit=1&q='+encodeURIComponent(me.address))
           .then(r=>r.json()).then(x=>{if(x&&x[0])return rpc('r_set_location',{t:TOKEN,p_lat:+x[0].lat,p_lng:+x[0].lon});}).catch(()=>{});
