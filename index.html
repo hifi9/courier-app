@@ -475,6 +475,7 @@ function restaurantApp(){
     const ws=F.day?F.day.ws:[];if(!ws.includes(F.win))F.win=null;
     $('#winSeg').innerHTML=ws.map(w=>`<button dir="ltr" style="flex:1 0 30%" class="${F.win===w?'on':''}">${w.replace('-','–')}</button>`).join('');
     $('#winSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{F.win=b.textContent.replace('–','-');renderWin();});
+    if(WIN.win_optional)$('#readySeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',!F.win&&b.textContent===F.ready));
   }
   let me=null,last={},timer=null;
   function renderLogo(){const L=$('#rLogo');if(!(me.settings&&okLogo(me.settings.logo))){L.textContent=me.name.slice(0,1);return;}
@@ -483,7 +484,7 @@ function restaurantApp(){
   const ST={searching:['מחפש שליח…',0,'#64748b'],to_rest:['שליח בדרך אליכם',1,'#f97316'],at_rest:['השליח במסעדה',2,'#f97316'],to_cust:['בדרך ללקוח',3,'#3b82f6'],at_cust:['אצל הלקוח',4,'#3b82f6'],delivered:['נמסר ✓',5,'#16a34a']};
 
   function seg(id,opts,key){const el=$(id);el.innerHTML=opts.map(v=>`<button class="${F[key]===v?'on':''}">${v}</button>`).join('');
-    el.querySelectorAll('button').forEach(b=>b.onclick=()=>{F[key]=b.textContent;seg(id,opts,key);});}
+    el.querySelectorAll('button').forEach(b=>b.onclick=()=>{F[key]=b.textContent;seg(id,opts,key);if(key==='ready'&&WIN&&WIN.win_optional&&F.win){F.win=null;renderWin();}});}
   seg('#sizeSeg',['שקית אחת','2 שקיות','גדול'],'size');seg('#readySeg',['עכשיו','10 דק׳','20 דק׳'],'ready');
 
   /* address search (Nominatim, on demand only) */
@@ -621,7 +622,7 @@ function restaurantApp(){
     unlockAudio();
     if(F.lat==null){toast('חפשו את הכתובת ובחרו מהרשימה',true);return;}
     let ws=null,we=null,readyTxt=F.ready==='עכשיו'?'עכשיו':'בעוד '+F.ready;
-    if(WIN){if(!F.day||!F.win){toast('בחרו יום וחלון משלוח',true);return;}
+    if(WIN&&!(WIN.win_optional&&!F.win)){if(!F.day||!F.win){toast('בחרו יום וחלון משלוח',true);return;}
       const [s,e]=F.win.split('-');ws=at(F.day.d,s).toISOString();we=at(F.day.d,e).toISOString();readyTxt=`${F.day.label} \u2066${s}–${e}\u2069`;}
     $('#bookBtn').disabled=true;
     try{
@@ -644,7 +645,7 @@ function restaurantApp(){
         if(me.settings&&me.settings.loc_fixed===false)fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&limit=1&q='+encodeURIComponent(me.address))
           .then(r=>r.json()).then(x=>{if(x&&x[0])return rpc('r_set_location',{t:TOKEN,p_lat:+x[0].lat,p_lng:+x[0].lon});}).catch(()=>{});
         if(me.settings&&me.settings.team_ui){$('#teamRow').style.display='flex';$('#profBtn').onclick=openProfile;$('#teamBtn').onclick=openTeam;}
-        if(me.settings&&(me.settings.zones||me.settings.default_windows)){WIN=me.settings;$('#readyBox').style.display='none';$('#winBox').style.display='block';renderWin();}}
+        if(me.settings&&(me.settings.zones||me.settings.default_windows)){WIN=me.settings;if(!WIN.win_optional)$('#readyBox').style.display='none';else $('#winBox').querySelector('.lbl').textContent='או משלוח בחלון זמן · יום';$('#winBox').style.display='block';renderWin();}}
       const d=await rpc('r_orders',{t:TOKEN});
       $('#cDot').classList.toggle('on',d.courier_online);{const L=d.couriers||[];const T=L.length?'מחוברים: '+L.join(', '):(d.courier_online?'שליח זמין':'אין שליח מחובר');$('#cTxt').textContent=T;$('#cTxt').title=T;}
       d.orders.forEach(o=>{if(last[o.id]&&last[o.id]!==o.status){toast(ST[o.status][0]);if(o.status==='to_rest'||o.status==='delivered')chime();}last[o.id]=o.status;});
