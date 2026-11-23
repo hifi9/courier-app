@@ -573,7 +573,7 @@ function restaurantApp(){
         if(!e.target.checked&&useTpl&&!(me.settings&&me.settings.prices_custom))PR=TPL.map(x=>({...x}));   // start editing from the recommended prices
         useTpl=e.target.checked;drawPrices();};};
     (async()=>{
-      try{TPL=await rpc('price_template',{});}catch(e){TPL=null;}
+      try{TPL=await rpc('price_template',{p:(me.settings&&me.settings.tpl)||null});}catch(e){TPL=null;}
       const fx=me.settings&&Array.isArray(me.settings.fixed)&&me.settings.fixed.length?me.settings.fixed:null;
       if(fx&&TPL){PR=fx;useTpl=!me.settings.prices_custom;drawPrices();}
       else if(fx){PR=fx;useTpl=false;TPL=fx;drawPrices();$('#tplTog').closest('label').style.display='none';}
