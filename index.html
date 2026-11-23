@@ -597,7 +597,7 @@ function restaurantApp(){
           const g=await (await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&limit=1&q='+encodeURIComponent(na))).json();
           if(!g||!g[0])throw new Error('לא מצאתי את הכתובת · נסו עם עיר');
           const a=await rpc('r_set_address',{t:TOKEN,p_address:na,p_lat:+g[0].lat,p_lng:+g[0].lon});
-          me.address=a.address;me.lat=a.lat;me.lng=a.lng;$('#rAddr0').textContent=me.address+' · ממשק מסעדה';}
+          me.address=a.address;me.lat=a.lat;me.lng=a.lng;$('#rAddr0').textContent=me.address+' · ממשק עסק';}
         if(PR){const ps=(useTpl?TPL:PR).map((_,i)=>Number(($(`[data-pi="${i}"]`).value||'').replace(/[^\d.]/g,'')));
           me.settings={...(me.settings||{}),fixed:await rpc('r_set_prices',{t:TOKEN,p_prices:ps,p_template:useTpl}),prices_custom:!useTpl};}
         toast('הפרופיל נשמר');closeSheet();
@@ -637,7 +637,7 @@ function restaurantApp(){
   async function poll(){
     clearTimeout(timer);
     try{
-      if(!me){me=await rpc('r_me',{t:TOKEN});$('#rName0').textContent=me.name;$('#rAddr0').textContent=me.address+' · ממשק מסעדה';$('#rLogo').textContent=me.name.slice(0,1);
+      if(!me){me=await rpc('r_me',{t:TOKEN});$('#rName0').textContent=me.name;$('#rAddr0').textContent=me.address+' · ממשק עסק';$('#rLogo').textContent=me.name.slice(0,1);
         renderLogo();
         if(me.settings&&/^[a-z0-9-]+\.png$/.test(me.settings.co_logo||'')){const co=document.createElement('div');co.style.cssText='flex:none;position:relative;width:96px;display:flex;justify-content:center';
           co.innerHTML=`<span style="width:52px;height:52px;border-radius:50%;overflow:hidden;display:block"><img src="${me.settings.co_logo}" alt="" style="width:62px;height:62px;margin:-5px;display:block"></span><span class="t2" style="white-space:nowrap;position:absolute;top:54px;left:50%;transform:translateX(-50%)" dir="ltr">Super Courier</span>`;$('#rName0').parentElement.after(co);
