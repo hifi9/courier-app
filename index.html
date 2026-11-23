@@ -161,8 +161,14 @@ function unlockAudio(){try{ac=ac||new (window.AudioContext||window.webkitAudioCo
 function beep(f,t0,d,v=.2){const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(v,t0+.01);g.gain.exponentialRampToValueAtTime(.001,t0+d);o.connect(g).connect(ac.destination);o.start(t0);o.stop(t0+d+.02);}
 function ringOnce(){if(!ac)return;const t=ac.currentTime;[880,1175,880,1175].forEach((f,i)=>beep(f,t+i*.16,.14));}
 function chime(){if(!ac)return;const t=ac.currentTime;beep(660,t,.25,.12);beep(990,t+.18,.35,.12);}
-function startRing(){stopRing();ringOnce();ringInt=setInterval(ringOnce,1400);try{navigator.vibrate&&navigator.vibrate([400,200,400,200,400]);}catch(e){}}
+function startRing(){stopRing();unlockAudio();ringOnce();ringInt=setInterval(ringOnce,1400);try{navigator.vibrate&&navigator.vibrate([400,200,400,200,400]);}catch(e){}}
 function stopRing(){clearInterval(ringInt);ringInt=null;}
+// Browsers only allow sound after the user touches the page. Unlock on ANY touch (not just the slider),
+// and show a tap-to-enable bar while sound is still blocked, so an offer never arrives silently.
+const audioOK=()=>!!(ac&&ac.state==='running');
+function soundBar(){const b=document.getElementById('soundBar');if(b&&audioOK())b.style.display='none';}
+['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,()=>{unlockAudio();setTimeout(soundBar,150);},{capture:true,passive:true}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ac&&ac.state!=='running'){try{ac.resume();}catch(e){}}setTimeout(soundBar,300);});
 
 /* ================= slider ================= */
 const ICON_POWER=c=>`<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>`;
@@ -204,6 +210,7 @@ function courierApp(){
     <div class="pill"><span class="dot" id="dot"></span><span id="status">מנותק</span></div>
     <div class="pill earn" id="earnPill">₪0.00</div>
   </div>
+  <button id="soundBar" style="display:none;position:fixed;top:calc(84px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:30;align-items:center;gap:8px;border:0;border-radius:22px;padding:12px 18px;background:#f97316;color:#fff;font:800 16px Heebo,sans-serif;box-shadow:0 6px 20px #0006">🔇 הקש כאן להפעלת צלצול</button>
   <button class="round locate" id="locBtn" aria-label="מיקום"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
   <div class="net" id="net">אין חיבור לשרת</div>
   <div class="sheet" id="sheet"></div>
@@ -283,6 +290,7 @@ function courierApp(){
 
   function render(){
     const on=!!(S.me&&S.me.is_online);
+    {const sb=$('#soundBar');if(sb){if(!sb.onclick)sb.onclick=()=>{unlockAudio();setTimeout(()=>{chime();soundBar();},120);};sb.style.display=(on&&!audioOK())?'flex':'none';}}
     ['#dot','#dot2'].forEach(s=>$(s).classList.toggle('on',on));
     $('#status').textContent=$('#status2').textContent=on?'מחובר':'מנותק';
     $('#earnPill').textContent=ils(S.today.total);
