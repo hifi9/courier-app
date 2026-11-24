@@ -349,7 +349,7 @@ function courierApp(){
   function closeOffer(){clearInterval(S.cd);stopRing();$('#offerOv').classList.remove('show');S.shown=null;}
 
   /* active */
-  const STEPS={to_rest:[0,'בדרך למסעדה','הגעתי למסעדה'],at_rest:[1,'במסעדה · איסוף','אספתי את ההזמנה'],to_cust:[2,'בדרך ללקוח','הגעתי ללקוח'],at_cust:[3,'אצל הלקוח','המשלוח נמסר']};
+  const STEPS={to_rest:[0,'בדרך לבית העסק','הגעתי לבית העסק'],at_rest:[1,'בבית העסק · איסוף','אספתי את ההזמנה'],to_cust:[2,'בדרך ללקוח','הגעתי ללקוח'],at_cust:[3,'אצל הלקוח','המשלוח נמסר']};
   function renderActive(sh){
     const o=S.active,[i,tag,btn]=STEPS[o.status],atRest=i<2;
     const lat=atRest?o.restaurant.lat:o.cust_lat,lng=atRest?o.restaurant.lng:o.cust_lng;
@@ -361,7 +361,7 @@ function courierApp(){
       <div class="row"><div class="ic ${atRest?'':'blue'}">${atRest?'🍽️':'🏠'}</div><div><div class="t1">${esc(title)}</div><div class="t2">${esc(addr)}</div></div><div class="money">${ils(o.price)}</div></div>
       <div class="hr"></div><div class="t2">${esc(o.size||'')} · ${o.km} ק״מ${o.window_start?' · 📅 '+esc(o.ready):''}${o.note?' · 📝 '+esc(o.note):''}</div>
       <div class="btns"><a class="b dark" href="https://waze.com/ul?q=${encodeURIComponent(addr)}&navigate=yes" target="_blank" rel="noopener">🧭 ניווט ב-Waze</a>
-      ${phone?`<a class="b light" href="tel:${esc(phone)}">📞 ${atRest?'מסעדה':'לקוח'}</a>`:`<button class="b light" disabled style="opacity:.5">📞 אין מספר</button>`}</div></div>`);
+      ${phone?`<a class="b light" href="tel:${esc(phone)}">📞 ${atRest?'בית העסק':'לקוח'}</a>`:`<button class="b light" disabled style="opacity:.5">📞 אין מספר</button>`}</div></div>`);
     if(!atRest){
       const done=o.photo_url||(S.photoDone&&S.photoDone[o.id]);
       sh.lastElementChild.insertAdjacentHTML('beforeend',`<label class="b ${done?'light':'dark'}" style="margin-top:10px;cursor:pointer;height:50px">${done?'✓ תמונת מסירה נשמרה · צלם שוב':'📷 צילום מסירה'}<input type="file" accept="image/*" capture="environment" id="podIn" style="display:none"></label>`);
@@ -481,7 +481,7 @@ function restaurantApp(){
   function renderLogo(){const L=$('#rLogo');if(!(me.settings&&okLogo(me.settings.logo))){L.textContent=me.name.slice(0,1);return;}
     L.textContent='';const sqr=me.settings.logo_square;L.style.cssText=sqr?'padding:0;overflow:hidden;background:#000':'width:auto;min-width:48px;max-width:140px;padding:6px 10px;background:#e4ded2';
     const im=document.createElement('img');im.src=me.settings.logo;im.alt=me.name;im.style.cssText=sqr?'width:48px;height:48px;display:block':'height:34px;max-width:120px;object-fit:contain;display:block';L.appendChild(im);}
-  const ST={searching:['מחפש שליח…',0,'#64748b'],to_rest:['שליח בדרך אליכם',1,'#f97316'],at_rest:['השליח במסעדה',2,'#f97316'],to_cust:['בדרך ללקוח',3,'#3b82f6'],at_cust:['אצל הלקוח',4,'#3b82f6'],delivered:['נמסר ✓',5,'#16a34a']};
+  const ST={searching:['מחפש שליח…',0,'#64748b'],to_rest:['שליח בדרך אליכם',1,'#f97316'],at_rest:['השליח בבית העסק',2,'#f97316'],to_cust:['בדרך ללקוח',3,'#3b82f6'],at_cust:['אצל הלקוח',4,'#3b82f6'],delivered:['נמסר ✓',5,'#16a34a']};
 
   function seg(id,opts,key){const el=$(id);el.innerHTML=opts.map(v=>`<button class="${F[key]===v?'on':''}">${v}</button>`).join('');
     el.querySelectorAll('button').forEach(b=>b.onclick=()=>{F[key]=b.textContent;seg(id,opts,key);if(key==='ready'&&WIN&&WIN.win_optional&&F.win){F.win=null;renderWin();}});}
