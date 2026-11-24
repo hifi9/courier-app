@@ -462,7 +462,7 @@ function restaurantApp(){
   function zoneWindows(){if(!WIN)return [];const nz=s=>String(s).replace(/[־\-–]/g,' ').replace(/\s+/g,' ');const c=nz((F.city||'')+' '+(F.addr||''));
     const z=(WIN.zones||[]).find(z=>(z.match||[]).some(m=>c.includes(nz(m))));return {label:z?z.label:'',list:z?z.windows:(WIN.default_windows||[])};}
   function availDays(){const out=[],now=new Date(),closed=WIN.closed_days||[];
-    for(let i=0;out.length<3&&i<8;i++){const d=new Date(now);d.setDate(now.getDate()+i);d.setHours(0,0,0,0);if(closed.includes(d.getDay()))continue;
+    for(let i=0;out.length<(WIN.win_days||3)&&i<8;i++){const d=new Date(now);d.setDate(now.getDate()+i);d.setHours(0,0,0,0);if(closed.includes(d.getDay()))continue;
       const ws=zoneWindows().list.filter(w=>at(d,w.split('-')[1])-now>=45*60000);if(!ws.length)continue;
       out.push({d,label:i===0?'היום':i===1?'מחר':'יום '+DAYN[d.getDay()],ws});}
     return out;}
