@@ -280,7 +280,7 @@ function courierApp(){
       const d=await rpc('c_poll',{t:TOKEN,p_lat:S.pos?S.pos[0]:null,p_lng:S.pos?S.pos[1]:null});
       $('#net').style.display='none';
       const prevActive=S.active;
-      S.me=d.me;S.active=d.active;S.offer=d.offer;S.today=d.today;S.upcoming=d.upcoming||[];
+      S.me=d.me;S.active=d.active;S.offer=d.offer;S.stops=d.stops||[];S.today=d.today;S.upcoming=d.upcoming||[];
       if(prevActive&&!S.active&&!S.justDelivered)toast('המשלוח בוטל או הסתיים');
       S.justDelivered=false;
       render();
@@ -295,11 +295,11 @@ function courierApp(){
     $('#status').textContent=$('#status2').textContent=on?'מחובר':'מנותק';
     $('#earnPill').textContent=ils(S.today.total);
     if(S.me){$('#meName').textContent=S.me.name;$('#avName').textContent=S.me.name.slice(0,1);}
-    const key=(S.active?S.active.id+S.active.status:(on?'on':'off'))+'|'+(S.upcoming||[]).length+'|'+(S.pushOn?1:0);
+    const key=(S.active?S.active.id+S.active.status:(on?'on':'off'))+'|'+(S.stops||[]).map(x=>x.id.slice(0,6)+x.status).join(',')+'|'+(S.upcoming||[]).length+'|'+(S.pushOn?1:0);
     if(key!==S.viewKey){S.viewKey=key;renderSheet();}
     /* offer handling */
     const o=S.offer;
-    if(o&&!S.active&&o.id!==S.shown&&!S.dismissed.has(o.id))showOffer(o);
+    if(o&&o.id!==S.shown&&!S.dismissed.has(o.id))showOffer(o);
     else if(S.shown&&(!o||o.id!==S.shown)&&!S.accepting){closeOffer();toast('ההזמנה כבר לא זמינה');}
     drawMap();
   }
@@ -329,18 +329,18 @@ function courierApp(){
     const dist=S.pos?km(S.pos[0],S.pos[1],o.restaurant.lat,o.restaurant.lng).toFixed(1):null;
     $('#offer').innerHTML=`
      <div class="row"><div class="ring"><svg width="70" height="70"><circle cx="35" cy="35" r="30" stroke="#e5e7eb" stroke-width="6" fill="none"/><circle id="arc" cx="35" cy="35" r="30" stroke="#22c55e" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><b id="secs">30</b></div>
-      <div style="margin-inline-start:auto;text-align:left"><div class="t2">הזמנה חדשה</div><div class="big">${ils(o.price)}</div></div></div>
+      <div style="margin-inline-start:auto;text-align:left"><div class="t2">${S.active?'הזמנה נוספת · אותו עסק':'הזמנה חדשה'}</div><div class="big">${ils(o.price)}</div></div></div>
      <div class="hr"></div>
      <div class="stop2"><span class="pin" style="background:#f97316"></span><div><div class="t1">${esc(o.restaurant.name)}</div><div class="t2">${esc(o.restaurant.address)}${dist?` · ${dist} ק״מ ממך`:''}</div></div></div>
      <div class="stop2"><span class="pin" style="background:#3b82f6"></span><div><div class="t1">${esc(o.cust_address)}</div><div class="t2">${esc(o.size||'')}</div></div></div>
      <div class="t2" style="margin-top:4px">📍 ${o.km} ק״מ${o.ready?(o.window_start?' · 📅 חלון '+esc(o.ready):' · ⏱️ מוכן '+esc(o.ready)):''}</div>
      ${o.note?`<div class="t2" style="margin-top:4px">📝 ${esc(o.note)}</div>`:''}
-     <div class="btns"><button class="b decline" id="dec">דחה</button><button class="b accept" id="acc">קבל הזמנה</button></div>`;
+     <div class="btns"><button class="b decline" id="dec">דחה</button><button class="b accept" id="acc">${S.active?'קח גם את זה':'קבל הזמנה'}</button></div>`;
     $('#offerOv').classList.add('show');startRing();
     let left=30;clearInterval(S.cd);
     S.cd=setInterval(()=>{left--;const s=$('#secs');if(!s)return;s.textContent=left;$('#arc').setAttribute('stroke-dashoffset',C*(1-left/30));if(left<=10)$('#arc').setAttribute('stroke','#ef4444');if(left<=0)decline(o);},1000);
     $('#acc').onclick=async()=>{S.accepting=true;$('#acc').disabled=true;
-      try{const a=await rpc('c_accept',{t:TOKEN,p_id:o.id});closeOffer();S.active=a;S.viewKey=null;render();}
+      try{const a=await rpc('c_accept',{t:TOKEN,p_id:o.id});closeOffer();if(S.active)toast('נוסף למסלול');else S.active=a;S.viewKey=null;render();}
       catch(e){toast(e.message,true);closeOffer();S.dismissed.add(o.id);}
       S.accepting=false;poll();};
     $('#dec').onclick=()=>decline(o);
@@ -371,6 +371,10 @@ function courierApp(){
           const r=await fetch(SB_URL+'/functions/v1/delivery-photo',{method:'POST',headers:{apikey:SB_KEY},body:fd});
           if(!r.ok)throw new Error();S.photoDone=S.photoDone||{};S.photoDone[o.id]=true;toast('התמונה נשמרה · העסק יכול לשלוח ללקוח');S.viewKey=null;render();}
         catch(err){toast('העלאת התמונה נכשלה',true);}};
+    }
+    if((S.stops||[]).length>1){const L=S.stops,N=L.length;
+      sh.insertAdjacentHTML('beforeend',`<div class="card" style="margin-top:10px"><div class="t2" style="font-weight:700;margin-bottom:6px">🧭 ${N} משלוחים במסלול</div>${L.map((x,k)=>`<div class="row" style="gap:8px;padding:6px 0;${k?'border-top:1px solid #eef2f7':''}"><b style="width:22px;height:22px;border-radius:50%;background:${k?'#e5e7eb':'#f97316'};color:${k?'#334155':'#fff'};display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">${k+1}</b><div style="flex:1;min-width:0"><div class="t1" style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.cust_address)}</div><div class="t2">${esc(x.cust_name||'')} · ${ils(x.price)}${x.status==='to_rest'||x.status==='at_rest'?' · לאיסוף':''}</div></div><button class="b light" data-mv="${x.id}" data-d="-1" aria-label="הקדם" style="width:44px;height:40px;flex:none;${k?'':'visibility:hidden'}">▲</button><button class="b light" data-mv="${x.id}" data-d="1" aria-label="דחה" style="width:44px;height:40px;flex:none;${k<N-1?'':'visibility:hidden'}">▼</button></div>`).join('')}</div>`);
+      sh.querySelectorAll('[data-mv]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await rpc('c_move',{t:TOKEN,p_id:b.dataset.mv,p_dir:+b.dataset.d});}catch(e){toast(e.message,true);}S.viewKey=null;poll();});
     }
     slider(sh,{label:btn,cls:'step',icon:ICON_ARROW('#f97316'),onDone:async()=>{
       const n=await rpc('c_advance',{t:TOKEN,p_id:o.id});
