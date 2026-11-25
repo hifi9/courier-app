@@ -502,6 +502,29 @@ function restaurantApp(){
       const num=(q.match(/\d+[א-ת]?/)||[])[0];
       let res=await nomi(q);
       if(!res.length&&num)res=await nomi(q.replace(num,' ').replace(/\s+/g,' ').trim());
+      // typo or spelling the map doesn't know: match against the official street list, then find it on the map
+      if(!res.length){
+        const cityName=c=>c.replace(/\s*-\s*יפו$/,'').trim();
+        const skel=x=>(x||'').replace(/[גז]['׳`]/g,'ז').replace(/צ['׳`]/g,'צ').replace(/['"׳״`]/g,'').replace(/[-־.,()\/0-9]/g,' ').replace(/[ךםןףץ]/g,c=>'כמנפצ'['ךםןףץ'.indexOf(c)]).replace(/[אויה]/g,'').split(/\s+/).filter(Boolean).sort().join(' ');
+        const dice=(a,b)=>{const g=z=>{const m=new Map();for(let i=0;i<z.length-1;i++){const k=z.slice(i,i+2);m.set(k,(m.get(k)||0)+1);}return m;};const A=g(a),B=g(b);let n=0,t=0;A.forEach(v=>t+=v);B.forEach(v=>t+=v);A.forEach((v,k)=>n+=Math.min(v,B.get(k)||0));return t?2*n/t:0;};
+        const same=(x,S)=>x.address&&x.address.road&&dice(skel(x.address.road),skel(S))>=0.5;
+        const photon=async t=>{const j=await (await fetch('https://photon.komoot.io/api/?limit=6&lang=default&lat='+((me&&me.lat)||32.1)+'&lon='+((me&&me.lng)||34.8)+'&q='+encodeURIComponent(t))).json();
+          return (j.features||[]).map(f=>{const p=f.properties||{};return {lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],address:{road:p.street||p.name,house_number:p.housenumber,city:p.city,suburb:p.district||p.locality}};});};
+        const resolve=async(S,C)=>{const city=cityName(C),n=num?' '+num:'',w=S.split(/\s+/);
+          try{const ph=(await photon(S+n+' '+city)).filter(x=>same(x,S));const hit=ph.find(x=>num&&x.address.house_number===num)||ph.find(x=>!x.address.house_number);
+            if(hit){if(num&&!hit.address.house_number)hit.address.house_number=num;return hit;}}catch(e){}
+          const tries=[S+n+', '+city];if(w.length>1)tries.push(w.slice(1).join(' ')+' '+w[0]+n+', '+city);
+          for(const t of tries){const ok=(await nomi(t)).find(x=>same(x,S));if(ok)return ok;}
+          for(const word of w.filter(x=>x.replace(/['׳]/g,'').length>=3).sort((a,b)=>b.length-a.length)){
+            const ok=(await nomi(word+', '+city)).find(x=>same(x,S));
+            if(ok){if(num){const hh=(await nomi(ok.address.road+n+', '+city)).find(x=>x.address&&x.address.road===ok.address.road);if(hh)return hh;}return ok;}}
+          return null;};
+        try{const S=((await rpc('r_street_suggest',{t:TOKEN,q}))||[]).filter(x=>x.score>=0.6).slice(0,2);
+          for(const s of S){const r=await resolve(s.street,s.city);if(r){r._fix=true;res.push(r);}}
+          if(!res.length&&S.length){const city=cityName(S[0].city),cr=await nomi(city);
+            if(cr.length){const r=cr[0];r._approx=true;r._fix=true;r._cityName=city;r._area=city;r._typed=S[0].street+(num?' '+num:'')+', '+city;res.push(r);}}
+        }catch(e){}
+      }
       // street missing from the free map: fall back to the city's location, keep the typed address for the courier and Waze
       if(!res.length){
         const CITIES=['תל אביב','הרצליה','רמת השרון','הרצליה','רעננה','כפר סבא','הוד השרון','רמת גן','גבעתיים','פתח תקווה','חולון','בת ים','בני ברק','ראשון לציון','נתניה','כפר שמריהו'];
@@ -513,11 +536,11 @@ function restaurantApp(){
       const box=$('#sugg');
       if(!res.length){box.style.display='block';box.innerHTML='<div style="color:#94a3b8">לא נמצא · נסו להוסיף עיר</div>';return;}
       const seen=new Set();
-      box.innerHTML=res.map((r,i)=>{if(r._approx){r._city=r._cityName;return `<div data-i="${i}">📍 ${esc(r._typed)} <span style="color:#94a3b8">· מיקום משוער לפי העיר</span></div>`;}
+      box.innerHTML=res.map((r,i)=>{if(r._approx){r._city=r._cityName;return `<div data-i="${i}">${r._fix?'✨ התכוונת ל: ':'📍 '}${esc(r._typed)} <span style="color:#94a3b8">· מיקום משוער לפי העיר</span></div>`;}
         const a=r.address||{};const nice=[[a.road,a.house_number||(a.road?num:'')].filter(Boolean).join(' '),a.city||a.town||a.village||a.suburb].filter(Boolean).join(', ')||r.display_name;
-        if(seen.has(nice))return '';seen.add(nice);r._city=a.city||a.town||a.village||'';r._area=[a.suburb,a.neighbourhood,a.quarter,a.city_district,a.industrial,a.city,a.town,a.village,a.hamlet].filter(Boolean).join(' ');return `<div data-i="${i}">${esc(nice)}</div>`;}).join('');
+        if(seen.has(nice))return '';seen.add(nice);r._city=a.city||a.town||a.village||'';r._area=[a.suburb,a.neighbourhood,a.quarter,a.city_district,a.industrial,a.city,a.town,a.village,a.hamlet].filter(Boolean).join(' ');r._nice=nice;return `<div data-i="${i}">${r._fix?'✨ התכוונת ל: ':''}${esc(nice)}</div>`;}).join('');
       box.style.display='block';
-      box.querySelectorAll('[data-i]').forEach(el=>el.onclick=()=>{const r=res[+el.dataset.i];pick(r,r._approx?r._typed:el.textContent);});
+      box.querySelectorAll('[data-i]').forEach(el=>el.onclick=()=>{const r=res[+el.dataset.i];pick(r,r._approx?r._typed:(r._nice||el.textContent));});
     }catch(e){toast('חיפוש הכתובת נכשל',true);}
     finally{$('#fSearch').textContent='חפש';}
   }
