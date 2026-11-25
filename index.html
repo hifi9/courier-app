@@ -498,45 +498,40 @@ function restaurantApp(){
     const q=$('#fAddr').value.trim();if(q.length<3){toast('הקלידו כתובת מלאה',true);return;}
     $('#fSearch').textContent='…';
     try{
-      const nomi=async s=>(await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&accept-language=he&addressdetails=1&limit=6&q='+encodeURIComponent(s))).json();
       const num=(q.match(/\d+[א-ת]?/)||[])[0];
-      let res=await nomi(q);
-      if(!res.length&&num)res=await nomi(q.replace(num,' ').replace(/\s+/g,' ').trim());
-      // typo or spelling the map doesn't know: match against the official street list, then find it on the map
-      if(!res.length){
-        const cityName=c=>c.replace(/\s*-\s*יפו$/,'').trim();
-        const skel=x=>(x||'').replace(/[גז]['׳`]/g,'ז').replace(/צ['׳`]/g,'צ').replace(/['"׳״`]/g,'').replace(/[-־.,()\/0-9]/g,' ').replace(/[ךםןףץ]/g,c=>'כמנפצ'['ךםןףץ'.indexOf(c)]).replace(/[אויה]/g,'').split(/\s+/).filter(Boolean).sort().join(' ');
-        const dice=(a,b)=>{const g=z=>{const m=new Map();for(let i=0;i<z.length-1;i++){const k=z.slice(i,i+2);m.set(k,(m.get(k)||0)+1);}return m;};const A=g(a),B=g(b);let n=0,t=0;A.forEach(v=>t+=v);B.forEach(v=>t+=v);A.forEach((v,k)=>n+=Math.min(v,B.get(k)||0));return t?2*n/t:0;};
-        const same=(x,S)=>x.address&&x.address.road&&dice(skel(x.address.road),skel(S))>=0.5;
-        const photon=async t=>{const j=await (await fetch('https://photon.komoot.io/api/?limit=6&lang=default&lat='+((me&&me.lat)||32.1)+'&lon='+((me&&me.lng)||34.8)+'&q='+encodeURIComponent(t))).json();
-          return (j.features||[]).map(f=>{const p=f.properties||{};return {lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],address:{road:p.street||p.name,house_number:p.housenumber,city:p.city,suburb:p.district||p.locality}};});};
-        const resolve=async(S,C)=>{const city=cityName(C),n=num?' '+num:'',w=S.split(/\s+/);
-          try{const ph=(await photon(S+n+' '+city)).filter(x=>same(x,S));const hit=ph.find(x=>num&&x.address.house_number===num)||ph.find(x=>!x.address.house_number);
-            if(hit){if(num&&!hit.address.house_number)hit.address.house_number=num;return hit;}}catch(e){}
-          const tries=[S+n+', '+city];if(w.length>1)tries.push(w.slice(1).join(' ')+' '+w[0]+n+', '+city);
-          for(const t of tries){const ok=(await nomi(t)).find(x=>same(x,S));if(ok)return ok;}
-          for(const word of w.filter(x=>x.replace(/['׳]/g,'').length>=3).sort((a,b)=>b.length-a.length)){
-            const ok=(await nomi(word+', '+city)).find(x=>same(x,S));
-            if(ok){if(num){const hh=(await nomi(ok.address.road+n+', '+city)).find(x=>x.address&&x.address.road===ok.address.road);if(hh)return hh;}return ok;}}
-          return null;};
-        try{const S=((await rpc('r_street_suggest',{t:TOKEN,q}))||[]).filter(x=>x.score>=0.6).slice(0,2);
-          for(const s of S){const r=await resolve(s.street,s.city);if(r){r._fix=true;res.push(r);}}
-          if(!res.length&&S.length){const city=cityName(S[0].city),cr=await nomi(city);
-            if(cr.length){const r=cr[0];r._approx=true;r._fix=true;r._cityName=city;r._area=city;r._typed=S[0].street+(num?' '+num:'')+', '+city;res.push(r);}}
-        }catch(e){}
+      const nomi=async s=>{try{return await (await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=il&accept-language=he&addressdetails=1&limit=5&q='+encodeURIComponent(s))).json();}catch(e){return [];}};
+      // Photon: same OpenStreetMap data, forgiving with spelling, biased to the business location
+      const photon=async t=>{try{const j=await (await fetch('https://photon.komoot.io/api/?limit=6&lang=default&lat='+((me&&me.lat)||32.1)+'&lon='+((me&&me.lng)||34.8)+'&q='+encodeURIComponent(t))).json();
+        return (j.features||[]).filter(f=>(f.properties||{}).countrycode==='IL').map(f=>{const p=f.properties||{};return {lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],address:{road:p.street||p.name,house_number:p.housenumber,city:p.city,suburb:p.district||p.locality}};});}catch(e){return [];}};
+      const cityName=c=>c.replace(/\s*-\s*יפו$/,'').trim();
+      const skel=x=>(x||'').replace(/[גז]['׳`]/g,'ז').replace(/צ['׳`]/g,'צ').replace(/['"׳״`]/g,'').replace(/[-־.,()\/0-9]/g,' ').replace(/[ךםןףץ]/g,c=>'כמנפצ'['ךםןףץ'.indexOf(c)]).replace(/[אויה]/g,'').split(/\s+/).filter(w=>w.length>1).sort().join(' ');
+      const dice=(a,b)=>{const g=z=>{const m=new Map();for(let i=0;i<z.length-1;i++){const k=z.slice(i,i+2);m.set(k,(m.get(k)||0)+1);}return m;};const A=g(a),B=g(b);let n=0,t=0;A.forEach(v=>t+=v);B.forEach(v=>t+=v);A.forEach((v,k)=>n+=Math.min(v,B.get(k)||0));return t?2*n/t:0;};
+      const same=(x,S)=>x.address&&x.address.road&&dice(skel(x.address.road),skel(S))>=0.5;
+      const sameCity=(x,C)=>!C||!x.address.city||skel(x.address.city).includes(skel(cityName(C)).split(' ')[0]||'#');
+      // all three at once: the map as typed, the forgiving map, and the official street list
+      const [nr,pr,sg]=await Promise.all([nomi(q),photon(q),rpc('r_street_suggest',{t:TOKEN,q}).catch(()=>[])]);
+      const best=(sg||[]).filter(x=>x.score>=0.6)[0];
+      let res=[...nr.filter(r=>r.address&&(r.address.road||r.address.city||r.address.town)),...pr.filter(r=>r.address.road)];
+      if(best){
+        // the official list knows the street: keep map results on that street, else look it up by its official name
+        let hit=res.filter(r=>same(r,best.street)&&sameCity(r,best.city));
+        if(!hit.length){const n=num?' '+num:'';const ph=(await photon(best.street+n+' '+cityName(best.city))).filter(r=>same(r,best.street));
+          hit=ph.filter(r=>num&&r.address.house_number===num);if(!hit.length)hit=ph.slice(0,1);}
+        if(hit.length){const nw=x=>(x||'').replace(/['"׳״`]/g,'').replace(/[-־.,()\/]/g,' ').replace(/[ךםןףץ]/g,c=>'כמנפצ'['ךםןףץ'.indexOf(c)]).split(/\s+/);const typed=nw(q);hit.forEach(r=>{if(num&&!r.address.house_number)r.address.house_number=num;if(nw(r.address.road).some(w=>w.length>2&&!typed.includes(w)))r._fix=true;});res=[...hit,...res.filter(r=>!hit.includes(r))];}
       }
+      if(!res.length&&num)res=(await nomi(q.replace(num,' ').replace(/\s+/g,' ').trim()));
       // street missing from the free map: fall back to the city's location, keep the typed address for the courier and Waze
       if(!res.length){
         const CITIES=['תל אביב','הרצליה','רמת השרון','הרצליה','רעננה','כפר סבא','הוד השרון','רמת גן','גבעתיים','פתח תקווה','חולון','בת ים','בני ברק','ראשון לציון','נתניה','כפר שמריהו'];
-        const found=CITIES.find(c=>q.replace(/[-־]/g,' ').includes(c));
-        const home=((me&&me.address)||'').split(',').pop().trim();
+        const found=best?cityName(best.city):CITIES.find(c=>q.replace(/[-־]/g,' ').includes(c));
+        const home=((me&&me.address)||'').split(',').pop().replace(/·.*$/,'').trim();
         const opts=found?[found]:[...new Set([home,'תל אביב','הרצליה'].filter(Boolean))];
-        for(const city of opts){const cr=await nomi(city);if(cr.length){const r=cr[0];r._approx=true;r._cityName=city;r._area=city;r._typed=found?q:q+', '+city;res.push(r);}}
+        for(const city of opts){const cr=await nomi(city);if(cr.length){const r=cr[0];r._approx=true;r._fix=!!best;r._cityName=city;r._area=city;r._typed=best?best.street+(num?' '+num:'')+', '+city:(found?q:q+', '+city);res.push(r);}}
       }
       const box=$('#sugg');
       if(!res.length){box.style.display='block';box.innerHTML='<div style="color:#94a3b8">לא נמצא · נסו להוסיף עיר</div>';return;}
       const seen=new Set();
-      box.innerHTML=res.map((r,i)=>{if(r._approx){r._city=r._cityName;return `<div data-i="${i}">${r._fix?'✨ התכוונת ל: ':'📍 '}${esc(r._typed)} <span style="color:#94a3b8">· מיקום משוער לפי העיר</span></div>`;}
+      box.innerHTML=res.slice(0,6).map((r,i)=>{if(r._approx){r._city=r._cityName;return `<div data-i="${i}">${r._fix?'✨ התכוונת ל: ':'📍 '}${esc(r._typed)} <span style="color:#94a3b8">· מיקום משוער לפי העיר</span></div>`;}
         const a=r.address||{};const nice=[[a.road,a.house_number||(a.road?num:'')].filter(Boolean).join(' '),a.city||a.town||a.village||a.suburb].filter(Boolean).join(', ')||r.display_name;
         if(seen.has(nice))return '';seen.add(nice);r._city=a.city||a.town||a.village||'';r._area=[a.suburb,a.neighbourhood,a.quarter,a.city_district,a.industrial,a.city,a.town,a.village,a.hamlet].filter(Boolean).join(' ');r._nice=nice;return `<div data-i="${i}">${r._fix?'✨ התכוונת ל: ':''}${esc(nice)}</div>`;}).join('');
       box.style.display='block';
