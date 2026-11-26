@@ -117,7 +117,7 @@ const $=s=>document.querySelector(s);
 const ils=n=>'₪'+Number(n||0).toFixed(2);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let tt;function toast(m,err){const t=$('#toast');t.textContent=m;t.classList.toggle('err',!!err);t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2600);}
-const ERR={bad_token:'הקישור לא תקין',taken:'ההזמנה כבר נלקחה',already_busy:'יש לך כבר משלוח פעיל',address_required:'צריך לבחור כתובת מהרשימה',too_far:'הכתובת רחוקה מדי',not_found:'ההזמנה לא נמצאה',bad_state:'שלב לא תקין'};
+const ERR={closed_today:'היום אין שליחים זמינים · נחזור מחר',bad_token:'הקישור לא תקין',taken:'ההזמנה כבר נלקחה',already_busy:'יש לך כבר משלוח פעיל',address_required:'צריך לבחור כתובת מהרשימה',too_far:'הכתובת רחוקה מדי',not_found:'ההזמנה לא נמצאה',bad_state:'שלב לא תקין'};
 async function rpc(fn,args){
   const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
   const j=await r.json().catch(()=>null);
@@ -441,6 +441,7 @@ function restaurantApp(){
     <div id="rSheet" style="display:none;position:fixed;inset:0;background:#0009;z-index:20;align-items:flex-end" onclick="if(event.target===this)this.style.display='none'">
       <div style="background:#fff;color:var(--ink);width:100%;border-radius:24px 24px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto" id="rSheetIn"></div>
     </div>
+    <div id="closedBar" style="display:none;margin:0 14px 12px;background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;border-radius:16px;padding:14px 16px;font-weight:800;font-size:16px;line-height:1.5">⛔ היום אין שליחים זמינים<div style="font-weight:500;font-size:14px;color:#7f1d1d">אי אפשר להזמין משלוח היום. נחזור מחר.</div></div>
     <div class="rcard">
       <div class="t1" style="font-size:20px">הזמנת שליח</div>
       <div class="lbl">כתובת הלקוח</div>
@@ -670,6 +671,7 @@ function restaurantApp(){
         if(me.settings&&me.settings.team_ui){$('#teamRow').style.display='flex';$('#profBtn').onclick=openProfile;$('#teamBtn').onclick=openTeam;}
         if(me.settings&&(me.settings.zones||me.settings.default_windows)){WIN=me.settings;if(!WIN.win_optional)$('#readyBox').style.display='none';else $('#winBox').querySelector('.lbl').textContent='או משלוח בחלון זמן · יום';$('#winBox').style.display='block';renderWin();}}
       const d=await rpc('r_orders',{t:TOKEN});
+      {const cl=!!d.closed;$('#closedBar').style.display=cl?'block':'none';const bb=$('#bookBtn');bb.disabled=cl;bb.style.opacity=cl?.45:'';}
       $('#cDot').classList.toggle('on',d.courier_online);{const L=d.couriers||[];const T=L.length?'מחוברים: '+L.join(', '):(d.courier_online?'שליח זמין':'אין שליח מחובר');$('#cTxt').textContent=T;$('#cTxt').title=T;}
       d.orders.forEach(o=>{if(last[o.id]&&last[o.id]!==o.status){toast(ST[o.status][0]);if(o.status==='to_rest'||o.status==='delivered')chime();}last[o.id]=o.status;});
       renderList(d);

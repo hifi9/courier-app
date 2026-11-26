@@ -106,7 +106,7 @@ function gate(msg){
   $('#go').onclick=()=>{TOKEN=$('#k').value.trim();try{localStorage.setItem('ops_k',TOKEN);}catch(e){}load();};
 }
 function shell(){
-  $('#app').innerHTML=`<header><h1><span class="t">🛵 חלון אופרציה</span> <span class="upd" id="upd"></span><button id="psh" style="min-height:36px;border:1px solid #f97316;background:#2a1a0c;color:#fb923c;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700;display:none">📲 התראות</button><button id="snd" aria-label="צפצוף" style="min-height:36px;border:1px solid #24345a;background:#16223a;color:#e8edf6;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700"></button></h1><div class="kpis" id="kpis"></div></header>
+  $('#app').innerHTML=`<header><h1><span class="t">🛵 חלון אופרציה</span> <span class="upd" id="upd"></span><button id="cls" style="min-height:36px;border:1px solid #24345a;background:#16223a;color:#e8edf6;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700"></button><button id="psh" style="min-height:36px;border:1px solid #f97316;background:#2a1a0c;color:#fb923c;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700;display:none">📲 התראות</button><button id="snd" aria-label="צפצוף" style="min-height:36px;border:1px solid #24345a;background:#16223a;color:#e8edf6;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700"></button></h1><div class="kpis" id="kpis"></div></header>
   <div id="map"></div>
   <main>
     <section><h2>משלוחים פעילים <label class="tog" style="margin-inline-start:auto"><input type="checkbox" id="tst" ${showTest?'checked':''}>הצג בדיקות</label></h2><div id="act"></div></section>
@@ -115,6 +115,9 @@ function shell(){
   </main>`;
   $('#psh').onclick=async()=>{const b=$('#psh');b.textContent='…';const ok=await enablePush();b.textContent=ok?'✓ פעיל':'📲 התראות';if(!ok)alert(pushErr||'לא הצלחתי להפעיל התראות');else setTimeout(()=>b.style.display='none',2500);};
   checkPush();
+  $('#cls').onclick=async()=>{const on=!(D&&D.closed);
+    if(on&&!confirm('לסגור להיום? כל העסקים יראו "היום אין שליחים זמינים" ולא יוכלו להזמין עד חצות.'))return;
+    try{const r=await rpc('ops_set_closed',{t:TOKEN,p_on:on});D.closed=r;paintCls();}catch(e){alert('לא הצליח: '+e.message);}};
   paintSnd();$('#snd').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('ops_snd',soundOn?'1':'0');}catch(_){}paintSnd();if(soundOn){unlock();beep([880,1100]);}};
   $('#tst').onchange=e=>{showTest=e.target.checked;try{localStorage.setItem('ops_test',showTest?'1':'0');}catch(_){}fitted=false;render();};
   map=L.map('map',{zoomControl:false,attributionControl:true}).setView([32.12,34.83],12);
@@ -193,9 +196,11 @@ function render(){
   });
   couriers.filter(c=>c.lat&&(c.online||busy[c.id])).forEach(c=>{L.marker([c.lat,c.lng],{icon:L.divIcon({className:'',html:`<div class="cmark ${c.online?'':'off'}">🛵 ${esc(c.name)}</div>`,iconSize:null}),zIndexOffset:1000}).bindPopup(`${esc(c.name)} · נראה ${ago(c.last_seen)}`).addTo(layer);pts.push([c.lat,c.lng]);});
   if(!fitted&&pts.length){map.fitBounds(pts,{padding:[40,40],maxZoom:14});fitted=true;}
+  paintCls();
   tick();
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title='חלון אופרציה · Super Courier';});
+function paintCls(){const b=$('#cls');if(!b||!D)return;const c=!!D.closed;b.textContent=c?'⛔ סגור היום · לפתיחה':'⛔ אין זמינות היום';b.style.background=c?'#7f1d1d':'#16223a';b.style.borderColor=c?'#ef4444':'#24345a';}
 function tick(){const s=Math.round((Date.now()-last)/1000);const u=$('#upd');if(u)u.textContent='⟳ '+s+' שנ׳';}
 load();setInterval(()=>{if(!document.hidden)load();},30000);setInterval(tick,1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
