@@ -71,6 +71,12 @@ const STEP={searching:0,to_rest:1,at_rest:2,to_cust:3,at_cust:4,delivered:5};
 let TOKEN=new URLSearchParams(location.search).get('k');
 try{if(TOKEN)localStorage.setItem('ops_k',TOKEN);else TOKEN=localStorage.getItem('ops_k');}catch(e){}
 let D=null,map=null,layer=null,fitted=false,showTest=false,last=0;
+let soundOn=false,actx=null,seen=null,lateSeen=new Set();
+try{soundOn=localStorage.getItem('ops_snd')==='1';}catch(e){}
+function unlock(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();}catch(e){}}
+function beep(freqs){if(!soundOn||!actx)return;let t=actx.currentTime;freqs.forEach(f=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.4,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.28);o.connect(g).connect(actx.destination);o.start(t);o.stop(t+0.3);t+=0.34;});}
+function paintSnd(){const b=$('#snd');if(b)b.textContent=soundOn?'🔔 צפצוף פועל':'🔕 הפעל צפצוף';}
+document.addEventListener('pointerdown',()=>{if(soundOn)unlock();});
 try{showTest=localStorage.getItem('ops_test')==='1';}catch(e){}
 
 async function rpc(fn,args){
@@ -82,13 +88,14 @@ function gate(msg){
   $('#go').onclick=()=>{TOKEN=$('#k').value.trim();try{localStorage.setItem('ops_k',TOKEN);}catch(e){}load();};
 }
 function shell(){
-  $('#app').innerHTML=`<header><h1>🛵 חלון אופרציה <span class="upd" id="upd"></span></h1><div class="kpis" id="kpis"></div></header>
+  $('#app').innerHTML=`<header><h1>🛵 חלון אופרציה <span class="upd" id="upd"></span><button id="snd" aria-label="צפצוף" style="min-height:36px;border:1px solid #24345a;background:#16223a;color:#e8edf6;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700"></button></h1><div class="kpis" id="kpis"></div></header>
   <div id="map"></div>
   <main>
     <section><h2>משלוחים פעילים <label class="tog" style="margin-inline-start:auto"><input type="checkbox" id="tst" ${showTest?'checked':''}>הצג בדיקות</label></h2><div id="act"></div></section>
     <section><h2>שליחים</h2><div id="cour"></div></section>
     <section><h2>היום</h2><div class="card" id="done"></div></section>
   </main>`;
+  paintSnd();$('#snd').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('ops_snd',soundOn?'1':'0');}catch(_){}paintSnd();if(soundOn){unlock();beep([880,1100]);}};
   $('#tst').onchange=e=>{showTest=e.target.checked;try{localStorage.setItem('ops_test',showTest?'1':'0');}catch(_){}fitted=false;render();};
   map=L.map('map',{zoomControl:false,attributionControl:true}).setView([32.12,34.83],12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
@@ -113,6 +120,12 @@ function render(){
   const waiting=act.filter(o=>o.status==='searching');
   const late=waiting.filter(o=>!o.ws?mins(o.created)>=10:Date.now()>new Date(o.ws).getTime()+10*60000);
 
+  // beep: a new order waiting for a courier (two rising tones), or one waiting 10+ minutes (three low tones)
+  const fresh=waiting.filter(o=>seen&&!seen.has(o.id));
+  const newLate=late.filter(o=>!lateSeen.has(o.id));
+  if(fresh.length)beep([880,1100]);else if(newLate.length&&seen)beep([520,520,520]);
+  if(fresh.length||newLate.length){document.title='🔔 '+(fresh.length?'הזמנה חדשה':'הזמנה ממתינה')+' · חלון אופרציה';}
+  seen=new Set(D.orders.map(o=>o.id));late.forEach(o=>lateSeen.add(o.id));
   $('#kpis').innerHTML=[
     [online.length,'שליחים מחוברים'],[act.length-waiting.length,'בדרך'],[waiting.length,'מחפשים שליח',late.length?'warn':''],
     [done.length,'נמסרו היום'],[ils(done.reduce((s,o)=>s+Number(o.price),0)),'סה״כ היום']
@@ -162,6 +175,7 @@ function render(){
   if(!fitted&&pts.length){map.fitBounds(pts,{padding:[40,40],maxZoom:14});fitted=true;}
   tick();
 }
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title='חלון אופרציה · Super Courier';});
 function tick(){const s=Math.round((Date.now()-last)/1000);const u=$('#upd');if(u)u.textContent='עודכן לפני '+s+' שנ׳';}
 load();setInterval(()=>{if(!document.hidden)load();},30000);setInterval(tick,1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
