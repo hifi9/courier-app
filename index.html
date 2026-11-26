@@ -629,7 +629,7 @@ function restaurantApp(){
       btn.disabled=false;};
   }
   async function openTeam(){
-    const url=location.origin+location.pathname+'?j='+encodeURIComponent(me.join_code||'');
+    const url='https://supercourier.pages.dev/?j='+encodeURIComponent(me.join_code||'');
     const msg=`הצטרפות לצוות השליחים של ${me.name} באפליקציית Super Courier:\n${url}`;
     sheet(`<div class="t1" style="font-size:20px;margin-bottom:10px">הצוות שלי</div><div id="teamList" class="t2">טוען…</div>
       <button class="bookbtn" id="addCour" style="margin-top:16px;height:50px;font-size:18px">➕ הוספת שליח</button>
