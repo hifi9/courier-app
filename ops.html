@@ -12,7 +12,9 @@
 *{box-sizing:border-box}
 body{margin:0;background:#0d1628;color:#e8edf6;font-family:system-ui,-apple-system,"Segoe UI",Heebo,sans-serif;font-size:15px}
 header{position:sticky;top:0;z-index:500;background:#0d1628;padding:12px 14px 10px;border-bottom:1px solid #1e2b45}
-h1{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
+h1{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h1 button{white-space:nowrap}
+h1 .t{white-space:nowrap}
 .upd{font-size:12px;color:#8e9bb5;font-weight:500;margin-inline-start:auto}
 .kpis{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
 .kpi{flex:none;background:#16223a;border:1px solid #24345a;border-radius:12px;padding:8px 12px;min-width:92px}
@@ -73,9 +75,25 @@ try{if(TOKEN)localStorage.setItem('ops_k',TOKEN);else TOKEN=localStorage.getItem
 let D=null,map=null,layer=null,fitted=false,showTest=false,last=0;
 let soundOn=false,actx=null,seen=null,lateSeen=new Set();
 try{soundOn=localStorage.getItem('ops_snd')==='1';}catch(e){}
+const VAPID='BLavb4ymolI1BVSgt6prpOwW_CRfHz1RtaTBry9xCatmzHcDb5VHBJKJ-2m69rx3dXLzhEkdZZyt4hUmbzyOQ2Y';
+const pushOK=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+function b64u(x){const p='='.repeat((4-x.length%4)%4),b=atob((x+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+let pushErr='';
+// push to this phone even when the ops page is closed: new orders, and orders with no courier after 10 minutes
+async function enablePush(){let stage='בדיקת תמיכה';
+  try{if(!pushOK()){pushErr='הדפדפן לא תומך בהתראות';return false;}
+    stage='רישום שירות רקע';const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+    stage='בקשת הרשאה';if(Notification.permission==='default'&&await Notification.requestPermission()!=='granted'){pushErr='ההרשאה לא אושרה';return false;}
+    if(Notification.permission!=='granted'){pushErr='התראות חסומות בהגדרות הדפדפן';return false;}
+    stage='הרשמה';let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)});
+    stage='שמירה';await rpc('ops_save_push',{t:TOKEN,sub:sub.toJSON(),p_url:location.origin+location.pathname+'?k='+TOKEN});
+    try{localStorage.setItem('ops_push','1');}catch(_){}return true;
+  }catch(e){pushErr=stage+': '+(e&&e.message||e);return false;}}
+async function checkPush(){const b=$('#psh');if(!b||!pushOK())return;let on=false;try{on=localStorage.getItem('ops_push')==='1'&&Notification.permission==='granted';}catch(_){}
+  if(on){enablePush();b.style.display='none';}else b.style.display='inline-block';}
 function unlock(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();}catch(e){}}
 function beep(freqs){if(!soundOn||!actx)return;let t=actx.currentTime;freqs.forEach(f=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.4,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.28);o.connect(g).connect(actx.destination);o.start(t);o.stop(t+0.3);t+=0.34;});}
-function paintSnd(){const b=$('#snd');if(b)b.textContent=soundOn?'🔔 צפצוף פועל':'🔕 הפעל צפצוף';}
+function paintSnd(){const b=$('#snd');if(b)b.textContent=soundOn?'🔔 צפצוף':'🔕 צפצוף';}
 document.addEventListener('pointerdown',()=>{if(soundOn)unlock();});
 try{showTest=localStorage.getItem('ops_test')==='1';}catch(e){}
 
@@ -88,13 +106,15 @@ function gate(msg){
   $('#go').onclick=()=>{TOKEN=$('#k').value.trim();try{localStorage.setItem('ops_k',TOKEN);}catch(e){}load();};
 }
 function shell(){
-  $('#app').innerHTML=`<header><h1>🛵 חלון אופרציה <span class="upd" id="upd"></span><button id="snd" aria-label="צפצוף" style="min-height:36px;border:1px solid #24345a;background:#16223a;color:#e8edf6;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700"></button></h1><div class="kpis" id="kpis"></div></header>
+  $('#app').innerHTML=`<header><h1><span class="t">🛵 חלון אופרציה</span> <span class="upd" id="upd"></span><button id="psh" style="min-height:36px;border:1px solid #f97316;background:#2a1a0c;color:#fb923c;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700;display:none">📲 התראות</button><button id="snd" aria-label="צפצוף" style="min-height:36px;border:1px solid #24345a;background:#16223a;color:#e8edf6;border-radius:10px;padding:0 10px;font-size:14px;font-weight:700"></button></h1><div class="kpis" id="kpis"></div></header>
   <div id="map"></div>
   <main>
     <section><h2>משלוחים פעילים <label class="tog" style="margin-inline-start:auto"><input type="checkbox" id="tst" ${showTest?'checked':''}>הצג בדיקות</label></h2><div id="act"></div></section>
     <section><h2>שליחים</h2><div id="cour"></div></section>
     <section><h2>היום</h2><div class="card" id="done"></div></section>
   </main>`;
+  $('#psh').onclick=async()=>{const b=$('#psh');b.textContent='…';const ok=await enablePush();b.textContent=ok?'✓ פעיל':'📲 התראות';if(!ok)alert(pushErr||'לא הצלחתי להפעיל התראות');else setTimeout(()=>b.style.display='none',2500);};
+  checkPush();
   paintSnd();$('#snd').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('ops_snd',soundOn?'1':'0');}catch(_){}paintSnd();if(soundOn){unlock();beep([880,1100]);}};
   $('#tst').onchange=e=>{showTest=e.target.checked;try{localStorage.setItem('ops_test',showTest?'1':'0');}catch(_){}fitted=false;render();};
   map=L.map('map',{zoomControl:false,attributionControl:true}).setView([32.12,34.83],12);
@@ -176,7 +196,7 @@ function render(){
   tick();
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title='חלון אופרציה · Super Courier';});
-function tick(){const s=Math.round((Date.now()-last)/1000);const u=$('#upd');if(u)u.textContent='עודכן לפני '+s+' שנ׳';}
+function tick(){const s=Math.round((Date.now()-last)/1000);const u=$('#upd');if(u)u.textContent='⟳ '+s+' שנ׳';}
 load();setInterval(()=>{if(!document.hidden)load();},30000);setInterval(tick,1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
 </script>
