@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0d1628">
+<title>חלון אופרציה · Super Courier</title>
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0d1628;color:#e8edf6;font-family:system-ui,-apple-system,"Segoe UI",Heebo,sans-serif;font-size:15px}
+header{position:sticky;top:0;z-index:500;background:#0d1628;padding:12px 14px 10px;border-bottom:1px solid #1e2b45}
+h1{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
+.upd{font-size:12px;color:#8e9bb5;font-weight:500;margin-inline-start:auto}
+.kpis{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.kpi{flex:none;background:#16223a;border:1px solid #24345a;border-radius:12px;padding:8px 12px;min-width:92px}
+.kpi b{display:block;font-size:20px;font-weight:800}
+.kpi span{font-size:12px;color:#9aa8c2}
+.kpi.warn{border-color:#f97316}.kpi.warn b{color:#fb923c}
+#map{height:42vh;min-height:260px}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(195deg) brightness(.82) contrast(.92) saturate(.55)}
+.leaflet-control-attribution{font-size:9px;background:#0d1628aa!important;color:#8e9bb5}.leaflet-control-attribution a{color:#8e9bb5}
+main{padding:12px 12px 40px;max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h2{margin:0 0 8px;font-size:15px;color:#9aa8c2;font-weight:700;display:flex;align-items:center;gap:8px}
+.card{background:#111c31;border:1px solid #1e2b45;border-radius:16px;padding:12px 14px;margin-bottom:8px}
+.row{display:flex;align-items:center;gap:8px}
+.biz{font-size:12px;color:#9aa8c2;font-weight:700}
+.addr{font-size:16px;font-weight:800;margin:2px 0}
+.meta{font-size:13px;color:#9aa8c2}
+.price{font-weight:800;color:#4ade80;margin-inline-start:auto;font-size:16px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800;white-space:nowrap}
+.steps{display:flex;gap:4px;margin:10px 0 6px}
+.steps i{flex:1;height:6px;border-radius:3px;background:#24345a}
+.steps i.on{background:#f97316}
+.steps i.done{background:#22c55e}
+.alert{color:#fb923c;font-weight:800}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.empty{color:#6b7a96;font-size:14px;padding:6px 2px}
+.tog{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#9aa8c2;cursor:pointer;user-select:none}
+.tog input{accent-color:#f97316;width:16px;height:16px}
+.done-row{display:flex;gap:8px;align-items:center;padding:7px 2px;border-bottom:1px solid #1a2640;font-size:14px}
+.done-row:last-child{border-bottom:0}
+.done-row .a{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+a{color:#fb923c}
+.gate{max-width:360px;margin:20vh auto;padding:20px;text-align:center}
+.gate input{width:100%;padding:12px;border-radius:12px;border:1px solid #24345a;background:#16223a;color:#fff;font-size:16px;margin:12px 0}
+.gate button{width:100%;min-height:48px;border:0;border-radius:12px;background:#f97316;color:#fff;font-weight:800;font-size:16px}
+.cmark{background:#22c55e;color:#06210f;font-weight:800;font-size:12px;border-radius:12px;padding:3px 8px;white-space:nowrap;border:2px solid #0d1628;box-shadow:0 2px 6px #0008}
+.cmark.off{background:#64748b;color:#fff}
+.bmark{background:#fff;color:#0d1628;font-weight:800;font-size:11px;border-radius:8px;padding:2px 6px;white-space:nowrap;border:2px solid #f97316}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const SB_URL='https://inkbvfewxwnedfmkjxti.supabase.co';
+const SB_KEY='sb_publishable_Dw89LyAhNT2PTRVraI3OCA_CMTuMN__';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ils=n=>'₪'+Number(n||0).toFixed(0);
+const hm=t=>t?new Date(t).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jerusalem'}):'';
+const ago=t=>{if(!t)return 'לא ידוע';const m=Math.round((Date.now()-new Date(t))/60000);if(m<1)return 'עכשיו';if(m<60)return 'לפני '+m+' דק׳';const h=Math.round(m/60);if(h<48)return 'לפני '+h+' ש׳';return 'לפני '+Math.round(h/24)+' ימים';};
+const mins=t=>Math.round((Date.now()-new Date(t))/60000);
+const ACTIVE=['searching','to_rest','at_rest','to_cust','at_cust'];
+const ST={searching:['מחפש שליח','#f97316','#2a1a0c'],to_rest:['בדרך לעסק','#60a5fa','#0f1f3a'],at_rest:['בבית העסק','#a78bfa','#1d1638'],to_cust:['בדרך ללקוח','#38bdf8','#0b2233'],at_cust:['אצל הלקוח','#2dd4bf','#0a2724'],delivered:['נמסר','#4ade80','#0c2615'],cancelled:['בוטל','#94a3b8','#1e293b']};
+const STEP={searching:0,to_rest:1,at_rest:2,to_cust:3,at_cust:4,delivered:5};
+
+let TOKEN=new URLSearchParams(location.search).get('k');
+try{if(TOKEN)localStorage.setItem('ops_k',TOKEN);else TOKEN=localStorage.getItem('ops_k');}catch(e){}
+let D=null,map=null,layer=null,fitted=false,showTest=false,last=0;
+try{showTest=localStorage.getItem('ops_test')==='1';}catch(e){}
+
+async function rpc(fn,args){
+  const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
+  const j=await r.json().catch(()=>null);if(!r.ok)throw new Error((j&&j.message)||r.status);return j;
+}
+function gate(msg){
+  $('#app').innerHTML=`<div class="gate"><h1 style="justify-content:center">חלון אופרציה</h1><div class="meta">${esc(msg||'הדבק את קוד הגישה')}</div><input id="k" autocomplete="off" placeholder="קוד גישה"><button id="go">כניסה</button></div>`;
+  $('#go').onclick=()=>{TOKEN=$('#k').value.trim();try{localStorage.setItem('ops_k',TOKEN);}catch(e){}load();};
+}
+function shell(){
+  $('#app').innerHTML=`<header><h1>🛵 חלון אופרציה <span class="upd" id="upd"></span></h1><div class="kpis" id="kpis"></div></header>
+  <div id="map"></div>
+  <main>
+    <section><h2>משלוחים פעילים <label class="tog" style="margin-inline-start:auto"><input type="checkbox" id="tst" ${showTest?'checked':''}>הצג בדיקות</label></h2><div id="act"></div></section>
+    <section><h2>שליחים</h2><div id="cour"></div></section>
+    <section><h2>היום</h2><div class="card" id="done"></div></section>
+  </main>`;
+  $('#tst').onchange=e=>{showTest=e.target.checked;try{localStorage.setItem('ops_test',showTest?'1':'0');}catch(_){}fitted=false;render();};
+  map=L.map('map',{zoomControl:false,attributionControl:true}).setView([32.12,34.83],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  layer=L.layerGroup().addTo(map);
+}
+async function load(){
+  if(!TOKEN){gate();return;}
+  try{D=await rpc('ops_overview',{t:TOKEN});last=Date.now();if(!map)shell();render();}
+  catch(e){if(String(e.message).includes('bad_token')){try{localStorage.removeItem('ops_k');}catch(_){}TOKEN=null;map=null;gate('קוד הגישה לא תקין');}}
+}
+function render(){
+  const R=Object.fromEntries(D.restaurants.map(r=>[r.id,r]));
+  const isTest=o=>R[o.rid]&&R[o.rid].test;
+  const orders=D.orders.filter(o=>showTest||!isTest(o));
+  const act=orders.filter(o=>ACTIVE.includes(o.status)).sort((a,b)=>STEP[a.status]-STEP[b.status]||new Date(a.created)-new Date(b.created));
+  const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});
+  const isToday=t=>t&&new Date(t).toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'})===today;
+  const done=orders.filter(o=>o.status==='delivered'&&isToday(o.delivered));
+  const canc=orders.filter(o=>o.status==='cancelled'&&isToday(o.created));
+  const couriers=D.couriers;
+  const online=couriers.filter(c=>c.online);
+  const waiting=act.filter(o=>o.status==='searching');
+  const late=waiting.filter(o=>!o.ws?mins(o.created)>=10:Date.now()>new Date(o.ws).getTime()+10*60000);
+
+  $('#kpis').innerHTML=[
+    [online.length,'שליחים מחוברים'],[act.length-waiting.length,'בדרך'],[waiting.length,'מחפשים שליח',late.length?'warn':''],
+    [done.length,'נמסרו היום'],[ils(done.reduce((s,o)=>s+Number(o.price),0)),'סה״כ היום']
+  ].map(([b,s,c])=>`<div class="kpi ${c||''}"><b>${b}</b><span>${s}</span></div>`).join('');
+
+  // active orders
+  $('#act').innerHTML=act.length?act.map(o=>{
+    const [lbl,fg,bg]=ST[o.status];const st=STEP[o.status];const r=R[o.rid]||{};
+    const win=o.ws?`חלון ${hm(o.ws)}–${hm(o.we)}`:'מיידי';
+    let info='';
+    if(o.status==='searching'){const w=o.ws&&new Date(o.ws)>Date.now()?'מתחיל '+hm(o.ws):'ממתין '+mins(o.ws&&new Date(o.ws)>new Date(o.created)?o.ws:o.created)+' דק׳';
+      info=`<span class="${late.includes(o)?'alert':''}">${w}</span>${o.declined?` · נדחה ע״י ${o.declined}`:''}`;}
+    else info=`🛵 ${esc(o.courier||'')} · קיבל ${hm(o.accepted)}${o.picked?' · נאסף '+hm(o.picked):''}`;
+    return `<div class="card"><div class="row"><span class="biz">${esc(r.name||'')}</span><span class="chip" style="color:${fg};background:${bg}">${lbl}</span><span class="price">${ils(o.price)}</span></div>
+      <div class="addr">${esc(o.addr)}</div>
+      <div class="meta">${esc(o.cust||'')}${o.phone?` · <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a>`:''} · ${win} · הוזמן ${hm(o.created)}</div>
+      <div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=st?'done':(i===st+1?'on':'')}"></i>`).join('')}</div>
+      <div class="meta">${info}</div>${o.note?`<div class="meta" style="margin-top:4px">📝 ${esc(o.note)}</div>`:''}</div>`;
+  }).join(''):'<div class="empty">אין משלוחים פעילים כרגע</div>';
+
+  // couriers
+  const busy=Object.fromEntries(act.filter(o=>o.cid).map(o=>[o.cid,o]));
+  $('#cour').innerHTML=couriers.length?couriers.map(c=>{
+    const b=busy[c.id];
+    return `<div class="card"><div class="row"><span class="dot" style="background:${c.online?'#22c55e':'#475569'}"></span><b>${esc(c.name)}</b>
+      <span class="meta">${esc(c.vehicle||'')}</span><span class="price" style="color:#cbd5e1;font-size:14px">${c.today.n} · ${ils(c.today.sum)}</span></div>
+      <div class="meta" style="margin-top:4px">${c.online?(b?`במשלוח: ${esc(b.addr)} (${ST[b.status][0]})`:'מחובר · פנוי'):'לא מחובר'} · נראה ${ago(c.last_seen)}</div>
+      <div class="meta">${c.general?'כל העסקים':esc((c.teams||[]).join(', '))}${c.phone?` · <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:''}</div></div>`;
+  }).join(''):'<div class="empty">אין שליחים</div>';
+
+  // done today
+  const doneList=[...done].sort((a,b)=>new Date(b.delivered)-new Date(a.delivered));
+  $('#done').innerHTML=(doneList.length||canc.length)?doneList.map(o=>`<div class="done-row"><span style="color:#4ade80">✓</span><span class="meta" style="width:42px">${hm(o.delivered)}</span><span class="a">${esc(o.addr)} <span class="meta">· ${esc((R[o.rid]||{}).name||'')} · ${esc(o.courier||'')}</span></span><b>${ils(o.price)}</b></div>`).join('')
+    +canc.map(o=>`<div class="done-row" style="opacity:.6"><span>✕</span><span class="meta" style="width:42px">${hm(o.created)}</span><span class="a">${esc(o.addr)} <span class="meta">· ${esc((R[o.rid]||{}).name||'')} · בוטל</span></span><b>${ils(o.price)}</b></div>`).join('')
+    :'<div class="empty">עוד לא נמסרו משלוחים היום</div>';
+
+  // map
+  layer.clearLayers();const pts=[];
+  const ids=new Set(act.map(o=>o.rid));
+  D.restaurants.filter(r=>r.lat&&(showTest||!r.test)).forEach(r=>{const m=L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html:`<div class="bmark">🏪 ${esc(r.name)}</div>`,iconSize:null})}).addTo(layer);if(ids.has(r.id))pts.push([r.lat,r.lng]);});
+  act.forEach(o=>{if(!o.lat)return;const [,fg]=ST[o.status];
+    L.circleMarker([o.lat,o.lng],{radius:8,color:'#0d1628',weight:2,fillColor:fg,fillOpacity:1}).bindPopup(`<b>${esc(o.addr)}</b><br>${ST[o.status][0]} · ${ils(o.price)}`).addTo(layer);pts.push([o.lat,o.lng]);
+    const c=couriers.find(c=>c.id===o.cid);const r=R[o.rid];
+    if(c&&c.lat){const tgt=(o.status==='to_rest'||o.status==='at_rest')&&r?[r.lat,r.lng]:[o.lat,o.lng];L.polyline([[c.lat,c.lng],tgt],{color:fg,weight:2,dashArray:'6 6',opacity:.8}).addTo(layer);}
+  });
+  couriers.filter(c=>c.lat&&(c.online||busy[c.id])).forEach(c=>{L.marker([c.lat,c.lng],{icon:L.divIcon({className:'',html:`<div class="cmark ${c.online?'':'off'}">🛵 ${esc(c.name)}</div>`,iconSize:null}),zIndexOffset:1000}).bindPopup(`${esc(c.name)} · נראה ${ago(c.last_seen)}`).addTo(layer);pts.push([c.lat,c.lng]);});
+  if(!fitted&&pts.length){map.fitBounds(pts,{padding:[40,40],maxZoom:14});fitted=true;}
+  tick();
+}
+function tick(){const s=Math.round((Date.now()-last)/1000);const u=$('#upd');if(u)u.textContent='עודכן לפני '+s+' שנ׳';}
+load();setInterval(()=>{if(!document.hidden)load();},10000);setInterval(tick,1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
+</script>
+</body>
+</html>
