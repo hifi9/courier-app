@@ -163,7 +163,7 @@ function render(){
   tick();
 }
 function tick(){const s=Math.round((Date.now()-last)/1000);const u=$('#upd');if(u)u.textContent='עודכן לפני '+s+' שנ׳';}
-load();setInterval(()=>{if(!document.hidden)load();},10000);setInterval(tick,1000);
+load();setInterval(()=>{if(!document.hidden)load();},30000);setInterval(tick,1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
 </script>
 </body>
