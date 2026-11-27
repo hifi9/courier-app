@@ -171,12 +171,13 @@ function render(){
   const busy=Object.fromEntries(act.filter(o=>o.cid).map(o=>[o.cid,o]));
   $('#cour').innerHTML=couriers.length?couriers.map(c=>{
     const b=busy[c.id];
-    return `<div class="card"><div class="row"><span class="dot" style="background:${c.online?'#22c55e':'#475569'}"></span><b>${esc(c.name)}</b>
+    return `<div class="card" style="${c.paused?'opacity:.55':''}"><div class="row"><span class="dot" style="background:${c.paused?'#f59e0b':(c.online?'#22c55e':'#475569')}"></span><b>${esc(c.name)}</b>${c.paused?'<span class="chip" style="color:#fbbf24;background:#2a1f0a">⏸ מושהה</span>':''}
       <span class="meta">${esc(c.vehicle||'')}</span><span class="price" style="color:#cbd5e1;font-size:14px">${c.today.n} · ${ils(c.today.sum)}</span></div>
       <div class="meta" style="margin-top:4px">${c.online?(b?`במשלוח: ${esc(b.addr)} (${ST[b.status][0]})`:'מחובר · פנוי'):'לא מחובר'} · נראה ${ago(c.last_seen)}</div>
-      <div class="meta">${c.general?'כל העסקים':esc((c.teams||[]).join(', '))}${c.phone?` · <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:''}</div></div>`;
+      <div class="row" style="margin-top:2px"><div class="meta" style="flex:1">${c.general?'כל העסקים':esc((c.teams||[]).join(', '))}${c.phone?` · <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:''}</div>${c.general?'':`<button data-pz="${c.id}" data-v="${c.paused?0:1}" style="min-height:34px;border:1px solid ${c.paused?'#22c55e':'#f59e0b'};background:transparent;color:${c.paused?'#4ade80':'#fbbf24'};border-radius:10px;padding:0 10px;font-weight:700;font-size:13px">${c.paused?'החזר':'השהה'}</button>`}</div></div>`;
   }).join(''):'<div class="empty">אין שליחים</div>';
 
+  $('#cour').querySelectorAll('[data-pz]').forEach(b=>b.onclick=async()=>{b.disabled=true;const v=b.dataset.v==='1';try{await rpc('ops_set_paused',{t:TOKEN,p_cid:b.dataset.pz,p_paused:v});const c=D.couriers.find(x=>x.id===b.dataset.pz);if(c)c.paused=v;}catch(e){alert('לא הצליח: '+e.message);}render();});
   // done today
   const doneList=[...done].sort((a,b)=>new Date(b.delivered)-new Date(a.delivered));
   $('#done').innerHTML=(doneList.length||canc.length)?doneList.map(o=>`<div class="done-row"><span style="color:#4ade80">✓</span><span class="meta" style="width:42px">${hm(o.delivered)}</span><span class="a">${esc(o.addr)} <span class="meta">· ${esc((R[o.rid]||{}).name||'')} · ${esc(o.courier||'')}</span></span><b>${ils(o.price)}</b></div>`).join('')
