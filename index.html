@@ -680,7 +680,9 @@ function restaurantApp(){
         const full=!!c&&!late;
         bar.style.display=c&&(late||full)?'block':'none';
         if(late){bar.style.background='#fffbeb';bar.style.borderColor='#fcd34d';bar.style.color='#92400e';bar.innerHTML=`⏰ היום אין זמינות למשלוח מיידי<div style="font-weight:500;font-size:14px;color:#78350f">אפשר להזמין משלוח לאיסוף בסוף היום · האיסוף ב-${esc(c.at)}</div>`;}
-        else if(full){bar.style.background='#fef2f2';bar.style.borderColor='#fca5a5';bar.style.color='#991b1b';bar.innerHTML='⛔ היום אין שליחים זמינים<div style="font-weight:500;font-size:14px;color:#7f1d1d">אי אפשר להזמין משלוח היום. נחזור מחר.</div>';}
+        else if(full){const u=new Date(c.until),hm=u.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jerusalem'}),partial=hm!=='00:00';
+          bar.style.background='#fef2f2';bar.style.borderColor='#fca5a5';bar.style.color='#991b1b';
+          bar.innerHTML=(partial?`⛔ אין שליחים זמינים עד ${hm}`:'⛔ היום אין שליחים זמינים')+`<div style="font-weight:500;font-size:14px;color:#7f1d1d">${c.msg?esc(c.msg):(partial?`אפשר להזמין משלוח מ-${hm}.`:'אי אפשר להזמין משלוח היום. נחזור מחר.')}</div>`;}
         if(card)card.classList.toggle('lateMode',late);
         bb.textContent=late?`הזמן לאיסוף ב-${c.at}`:'הזמן שליח';bb.disabled=full;bb.style.opacity=full?.45:'';}
       $('#cDot').classList.toggle('on',d.courier_online);{const L=d.couriers||[];const T=L.length?'מחוברים: '+L.join(', '):(d.courier_online?'שליח זמין':'אין שליח מחובר');$('#cTxt').textContent=T;$('#cTxt').title=T;}
