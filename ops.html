@@ -201,10 +201,12 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.t
 // per-business "no couriers today": closes booking for that business until midnight
 function paintCls(){const box=$('#avail');if(!box||!D)return;
   const list=D.restaurants.filter(r=>showTest||!r.test);
-  box.innerHTML=list.map(r=>{const c=!!(r.closed||D.closed);return `<div class="done-row"><span class="dot" style="background:${c?'#ef4444':'#22c55e'}"></span><span class="a">${esc(r.name)} <span class="meta">· ${c?'סגור עד חצות':'פתוח להזמנות'}</span></span><button data-rid="${r.id}" data-on="${c?0:1}" style="min-height:36px;border:1px solid ${c?'#22c55e':'#ef4444'};background:transparent;color:${c?'#4ade80':'#f87171'};border-radius:10px;padding:0 12px;font-weight:700;font-size:13px">${c?'פתח':'סגור להיום'}</button></div>`;}).join('');
-  box.querySelectorAll('[data-rid]').forEach(b=>b.onclick=async()=>{const on=b.dataset.on==='1';const r=D.restaurants.find(x=>x.id===b.dataset.rid);
-    if(on&&!confirm(`לסגור את ${r.name} להיום? הם יראו "היום אין שליחים זמינים" ולא יוכלו להזמין עד חצות.`))return;
-    b.disabled=true;try{r.closed=await rpc('ops_set_closed',{t:TOKEN,p_on:on,p_rid:r.id});}catch(e){alert('לא הצליח: '+e.message);}paintCls();});}
+  const btn=(r,on,at,label,col)=>`<button data-rid="${r.id}" data-on="${on}" data-at="${at||''}" style="min-height:36px;border:1px solid ${col};background:transparent;color:${col};border-radius:10px;padding:0 10px;font-weight:700;font-size:13px">${label}</button>`;
+  box.innerHTML=list.map(r=>{const c=r.closed||D.closed;const st=!c?'פתוח להזמנות':(c.at?`רק איסוף ב-${c.at}`:'סגור עד חצות');const dot=!c?'#22c55e':(c.at?'#f59e0b':'#ef4444');
+    return `<div class="done-row"><span class="dot" style="background:${dot}"></span><span class="a">${esc(r.name)} <span class="meta">· ${st}</span></span>${c?btn(r,0,'','פתח','#4ade80'):btn(r,1,'16:00','איסוף 16:00','#fbbf24')+btn(r,1,'','סגור','#f87171')}</div>`;}).join('');
+  box.querySelectorAll('[data-rid]').forEach(b=>b.onclick=async()=>{const on=b.dataset.on==='1',at=b.dataset.at||null;const r=D.restaurants.find(x=>x.id===b.dataset.rid);
+    if(on&&!confirm(at?`${r.name}: היום רק איסוף ב-${at}? כל הזמנה תצא לאיסוף בשעה הזאת, עד חצות.`:`לסגור את ${r.name} להיום? הם יראו "היום אין שליחים זמינים" ולא יוכלו להזמין עד חצות.`))return;
+    b.disabled=true;try{r.closed=await rpc('ops_set_closed',{t:TOKEN,p_on:on,p_rid:r.id,p_at:at});}catch(e){alert('לא הצליח: '+e.message);}paintCls();});}
 function tick(){const s=Math.round((Date.now()-last)/1000);const u=$('#upd');if(u)u.textContent='⟳ '+s+' שנ׳';}
 load();setInterval(()=>{if(!document.hidden)load();},30000);setInterval(tick,1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
